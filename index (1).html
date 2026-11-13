@@ -570,13 +570,22 @@ footer{font-size:13px;color:var(--muted)}
   }
   function cnote(t){$("camNote").textContent=t||"";}
   function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  function overpass(q,again){
-    return fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)})
+  var HOSTS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+  function overpass(q,tryNo){
+    tryNo=tryNo||0;
+    function retry(){
+      if(tryNo>=3) throw new Error("map");
+      cnote("The map service is busy. Trying again in a few seconds.");
+      return wait(8000).then(function(){return overpass(q,tryNo+1);});
+    }
+    return fetch(HOSTS[tryNo%HOSTS.length],{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)})
       .then(function(r){
-        if((r.status===429||r.status===504)&&!again) return wait(6000).then(function(){return overpass(q,true);});
-        if(!r.ok) throw new Error("map "+r.status);
-        return r.json();
-      });
+        if(!r.ok) return retry();
+        return r.json().then(function(j){
+          if(!j||!j.elements||(j.remark&&!j.elements.length)) return retry();
+          return j;
+        });
+      },retry);
   }
   function locate(c){
     var parts=c.n.split("&");
@@ -598,26 +607,24 @@ footer{font-size:13px;color:var(--muted)}
   $("fixBtn").addEventListener("click",function(){
     if(fixing) return;
     fixing=true;
-    var i=0,done=0,missed=[],moved=[];
+    var i=0,done=0,missed=[],failed=[],moved=[];
+    function finish(){
+      fixing=false;save();render();
+      var have=cams.filter(function(c){return c.osm&&c.fixed;}).length;
+      cnote(have+" of "+cams.length+" positions now come from map data."+(moved.length?" Moved this time: "+moved.join("; ")+".":"")+(missed.length?" Not found on the map: "+missed.join("; ")+".":"")+(failed.length?" Service too busy for: "+failed.join("; ")+". Tap the button again in a few minutes to finish these.":""));
+    }
     function next(){
-      if(i>=cams.length){
-        fixing=false;save();render();
-        cnote("Updated "+done+" of "+cams.length+" from map data."+(moved.length?" Moved: "+moved.join("; ")+".":"")+(missed.length?" Not found, still estimated: "+missed.join("; ")+".":""));
-        return;
-      }
+      while(i<cams.length&&cams[i].osm&&cams[i].fixed) i++;   // already done on an earlier run
+      if(i>=cams.length){finish();return;}
       var c=cams[i];i++;
-      cnote("Looking up "+i+" of "+cams.length+": "+c.n);
+      cnote("Looking up "+c.n+" ("+i+" of "+cams.length+")");
       locate(c).then(function(p){
         if(p){
           var d=dist(c.lat,c.lon,p.lat,p.lon);
           if(d>30) moved.push(c.n+" by "+fmt(d));
-          c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;done++;
+          c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;done++;save();
         }else{missed.push(c.n);}
-        return wait(1200);
-      }).then(next,function(){
-        fixing=false;save();render();
-        cnote("The map data service could not be reached after "+done+" of "+cams.length+". Wait a minute and tap the button again.");
-      });
+      },function(){failed.push(c.n);}).then(function(){return wait(2500);}).then(next);
     }
     next();
   });
