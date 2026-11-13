@@ -42,7 +42,9 @@
   --stop:#ff8f86; --stop-bg:#45191a;
 }
 *{box-sizing:border-box}
-html,body{margin:0}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+main,main *{min-width:0}
+main{width:100%;overflow-wrap:anywhere}
 body{background:var(--road);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
 main{max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:20px}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
@@ -182,6 +184,10 @@ footer{font-size:13px;color:var(--muted)}
   <section aria-label="Camera robots">
     <h2>Camera robots</h2>
     <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Positions are estimates: tap Check on map, and fix any that sit in the wrong place.</p>
+    <div class="row">
+      <button class="primary" id="fixBtn" type="button">Fix positions from map data</button>
+    </div>
+    <p id="camNote" class="note" role="status"></p>
     <ul id="camList"></ul>
     <div class="card">
       <h3>Add a camera robot</h3>
@@ -251,7 +257,7 @@ footer{font-size:13px;color:var(--muted)}
     {n:"Jason Moyo Ave & Simon Muzenda St",lat:-17.8302,lon:31.0545,src:"official"},
     {n:"Samora Machel Ave & Simon Muzenda St",lat:-17.8262,lon:31.0545,src:"official"},
     {n:"Julius Nyerere Way & Jason Moyo Ave",lat:-17.8302,lon:31.0471,src:"official"},
-    {n:"Leopold Takawira St & Herbert Chitepo Ave",lat:-17.8202,lon:31.0457,src:"official"},
+    {n:"Leopold Takawira St & Herbert Chitepo Ave",lat:-17.8235,lon:31.0428,src:"official"},
     {n:"Sam Nujoma St & Josiah Tongogara Ave",lat:-17.8192,lon:31.0510,src:"official"},
     {n:"Churchill Ave & Sam Nujoma St",lat:-17.7915,lon:31.0462,src:"official"},
     {n:"Samora Machel Ave & Bishop Gaul Ave",lat:-17.8258,lon:31.0235,src:"official"},
@@ -260,7 +266,7 @@ footer{font-size:13px;color:var(--muted)}
     {n:"Robert Mugabe Rd & Abdel Gamal Nasser Rd",lat:-17.8322,lon:31.0385,src:"official"},
     {n:"Cripps Rd & Remembrance Dr",lat:-17.8498,lon:31.0412,src:"official"},
     {n:"Seke Rd & Cripps Rd",lat:-17.8480,lon:31.0535,src:"reported"},
-    {n:"Samora Machel Ave & Abdel Gamal Nasser Rd",lat:-17.8263,lon:31.0390,src:"reported"},
+    {n:"Samora Machel Ave & Abdel Gamal Nasser Rd",lat:-17.8289,lon:31.0404,src:"reported"},
     {n:"Jason Moyo Ave & Abdel Gamal Nasser Rd",lat:-17.8300,lon:31.0388,src:"reported"}
   ];
   var KEY="robotwatch.cams.v1";
@@ -273,7 +279,7 @@ footer{font-size:13px;color:var(--muted)}
     try{var s=localStorage.getItem(KEY); if(s){var a=JSON.parse(s); if(Array.isArray(a)&&a.length) return a;}}catch(e){}
     return clone(DEFAULTS);
   }
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed};})));}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed,osm:!!c.osm};})));}catch(e){}}
 
   function dist(aLat,aLon,bLat,bLon){
     var R=6371000,r=Math.PI/180;
@@ -403,7 +409,7 @@ footer{font-size:13px;color:var(--muted)}
       t1.textContent=c.src==="official"?"Named by officials":c.src==="reported"?"Reported in media":"Added by you";
       var t2=document.createElement("span");
       t2.className="tag "+(c.fixed?"ok":"rough");
-      t2.textContent=c.fixed?"Position confirmed":"Position estimated";
+      t2.textContent=c.fixed?(c.osm?"Position from map data":"Position confirmed"):"Position estimated";
       tags.appendChild(t1);tags.appendChild(t2);
       var d=document.createElement("div");d.className="dist";d.setAttribute("data-dist",i);
       var row=document.createElement("div");row.className="row";
@@ -413,7 +419,7 @@ footer{font-size:13px;color:var(--muted)}
       var here=document.createElement("button");here.type="button";here.className="small";here.textContent="I am here now";
       here.addEventListener("click",function(){
         if(!lastPos||demoTimer){note("Start a live drive first, then tap this while stopped at the robot.");return;}
-        c.lat=lastPos.lat;c.lon=lastPos.lon;c.fixed=true;save();render();note("Saved your position for "+c.n+".");
+        c.lat=lastPos.lat;c.lon=lastPos.lon;c.fixed=true;c.osm=false;save();render();note("Saved your position for "+c.n+".");
       });
       var ok=document.createElement("button");ok.type="button";ok.className="small";ok.textContent=c.fixed?"Mark as unsure":"Looks right";
       ok.addEventListener("click",function(){c.fixed=!c.fixed;save();render();});
@@ -550,6 +556,70 @@ footer{font-size:13px;color:var(--muted)}
       else if(e&&e.api) rnote(e.message);
       else rnote("The routing service could not be reached. It is blocked in this preview and works once RoboWatch is on its own web address.");
     });
+  });
+
+  // ----- fix camera positions from OpenStreetMap (Overpass) -----
+  // Looks up where the two named roads of each junction actually meet.
+  var BOX="(-17.95,30.95,-17.70,31.20)";
+  var ALT=[["muzenda","Muzenda|Fourth Street|4th Street"],["abdel gamal nasser","Abdel Gamal Nasser|Rotten Row"],
+           ["rotten row","Abdel Gamal Nasser|Rotten Row"],["sam nujoma","Sam Nujoma|Second Street"],["seke","^Seke R"]];
+  function roadRe(part){
+    var p=part.trim().replace(/\s+(ave|avenue|st|street|rd|road|dr|drive|way)\.?$/i,""),low=p.toLowerCase(),i;
+    for(i=0;i<ALT.length;i++){if(low.indexOf(ALT[i][0])>=0) return ALT[i][1];}
+    return p.replace(/[^A-Za-z0-9 '\-]/g,"");
+  }
+  function cnote(t){$("camNote").textContent=t||"";}
+  function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  function overpass(q,again){
+    return fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)})
+      .then(function(r){
+        if((r.status===429||r.status===504)&&!again) return wait(6000).then(function(){return overpass(q,true);});
+        if(!r.ok) throw new Error("map "+r.status);
+        return r.json();
+      });
+  }
+  function locate(c){
+    var parts=c.n.split("&");
+    if(parts.length!==2) return Promise.resolve(null);
+    var k='[~"^(name|old_name|alt_name)$"~"';
+    var q='[out:json][timeout:25];way[highway]'+k+roadRe(parts[0])+'",i]'+BOX+'->.a;way[highway]'+k+roadRe(parts[1])+'",i]'+BOX+'->.b;node(w.a)(w.b);out;';
+    return overpass(q,false).then(function(j){
+      var n=((j&&j.elements)||[]).filter(function(e){return e.type==="node";});
+      if(!n.length) return null;
+      // dual carriageways meet at several points: keep the cluster nearest the current pin
+      var near=n[0],best=Infinity;
+      n.forEach(function(e){var d=dist(c.lat,c.lon,e.lat,e.lon);if(d<best){best=d;near=e;}});
+      var g=n.filter(function(e){return dist(near.lat,near.lon,e.lat,e.lon)<150;}),la=0,lo=0;
+      g.forEach(function(e){la+=e.lat;lo+=e.lon;});
+      return {lat:la/g.length,lon:lo/g.length};
+    });
+  }
+  var fixing=false;
+  $("fixBtn").addEventListener("click",function(){
+    if(fixing) return;
+    fixing=true;
+    var i=0,done=0,missed=[],moved=[];
+    function next(){
+      if(i>=cams.length){
+        fixing=false;save();render();
+        cnote("Updated "+done+" of "+cams.length+" from map data."+(moved.length?" Moved: "+moved.join("; ")+".":"")+(missed.length?" Not found, still estimated: "+missed.join("; ")+".":""));
+        return;
+      }
+      var c=cams[i];i++;
+      cnote("Looking up "+i+" of "+cams.length+": "+c.n);
+      locate(c).then(function(p){
+        if(p){
+          var d=dist(c.lat,c.lon,p.lat,p.lon);
+          if(d>30) moved.push(c.n+" by "+fmt(d));
+          c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;done++;
+        }else{missed.push(c.n);}
+        return wait(1200);
+      }).then(next,function(){
+        fixing=false;save();render();
+        cnote("The map data service could not be reached after "+done+" of "+cams.length+". Wait a minute and tap the button again.");
+      });
+    }
+    next();
   });
 
   render();updateIdle();
