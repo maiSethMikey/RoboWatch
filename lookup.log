@@ -1,0 +1,39 @@
+Jason Moyo Ave & Simon Muzenda St
+   {'n': 'Jason Moyo Ave & Simon Muzenda St', 'lat': -17.829589, 'lon': 31.054806, 'how': 'shared point', 'crossings': 2, 'used': 2, 'moved_m': 75}
+Samora Machel Ave & Simon Muzenda St
+   {'n': 'Samora Machel Ave & Simon Muzenda St', 'lat': -17.825497, 'lon': 31.053769, 'how': 'shared point', 'crossings': 4, 'used': 4, 'moved_m': 110}
+Julius Nyerere Way & Jason Moyo Ave
+  retry after https://overpass-api.de/api/interpreter: HTTP Error 502: Bad Gateway
+  retry after https://overpass.kumi.systems/api/interpreter: The read operation timed out
+  retry after https://overpass.private.coffee/api/interpreter: The read operation timed out
+  retry after https://overpass-api.de/api/interpreter: HTTP Error 502: Bad Gateway
+   {'n': 'Julius Nyerere Way & Jason Moyo Ave', 'lat': -17.83142, 'lon': 31.046783, 'how': 'shared point', 'crossings': 2, 'used': 2, 'moved_m': 140}
+Leopold Takawira St & Herbert Chitepo Ave
+   {'n': 'Leopold Takawira St & Herbert Chitepo Ave', 'lat': -17.82289, 'lon': 31.043779, 'how': 'shared point', 'crossings': 1, 'used': 1, 'moved_m': 124}
+Sam Nujoma St & Josiah Tongogara Ave
+   {'n': 'Sam Nujoma St & Josiah Tongogara Ave', 'lat': -17.815996, 'lon': 31.047793, 'how': 'shared point', 'crossings': 1, 'used': 1, 'moved_m': 492}
+Churchill Ave & Sam Nujoma St
+   {'n': 'Churchill Ave & Sam Nujoma St', 'lat': -17.791937, 'lon': 31.043716, 'how': 'shared point', 'crossings': 2, 'used': 2, 'moved_m': 267}
+Samora Machel Ave & Bishop Gaul Ave
+  retry after https://overpass-api.de/api/interpreter: HTTP Error 502: Bad Gateway
+  retry after https://overpass.kumi.systems/api/interpreter: The read operation timed out
+  retry after https://overpass.private.coffee/api/interpreter: The read operation timed out
+   {'n': 'Samora Machel Ave & Bishop Gaul Ave', 'lat': -17.827742, 'lon': 31.019863, 'how': 'shared point', 'crossings': 3, 'used': 3, 'moved_m': 441}
+Samora Machel Ave & Glenara Ave
+   {'n': 'Samora Machel Ave & Glenara Ave', 'lat': -17.823978, 'lon': 31.092088, 'how': 'shared point', 'crossings': 4, 'used': 4, 'moved_m': 700}
+Glenara Ave & Chiremba Rd
+   {'n': 'Glenara Ave & Chiremba Rd', 'lat': -17.844813, 'lon': 31.074575, 'how': 'shared point', 'crossings': 1, 'used': 1, 'moved_m': 840}
+Robert Mugabe Rd & Abdel Gamal Nasser Rd
+   {'n': 'Robert Mugabe Rd & Abdel Gamal Nasser Rd', 'lat': -17.833784, 'lon': 31.038764, 'how': 'shared point', 'crossings': 1, 'used': 1, 'moved_m': 178}
+Cripps Rd & Remembrance Dr
+   {'n': 'Cripps Rd & Remembrance Dr', 'names_a': ['Cripps Road'], 'names_b': ['Remembrance Drive'], 'lat': -17.850809, 'lon': 31.042154, 'how': 'closest approach', 'gap_m': 388, 'moved_m': 151}
+Seke Rd & Cripps Rd
+  retry after https://overpass-api.de/api/interpreter: HTTP Error 502: Bad Gateway
+  retry after https://overpass.kumi.systems/api/interpreter: The read operation timed out
+  retry after https://overpass.private.coffee/api/interpreter: The read operation timed out
+   {'n': 'Seke Rd & Cripps Rd', 'lat': -17.852632, 'lon': 31.0536, 'how': 'shared point', 'crossings': 1, 'used': 1, 'moved_m': 515}
+Samora Machel Ave & Abdel Gamal Nasser Rd
+   {'n': 'Samora Machel Ave & Abdel Gamal Nasser Rd', 'lat': -17.828773, 'lon': 31.03999, 'how': 'shared point', 'crossings': 2, 'used': 2, 'moved_m': 46}
+Jason Moyo Ave & Abdel Gamal Nasser Rd
+   {'n': 'Jason Moyo Ave & Abdel Gamal Nasser Rd', 'lat': -17.830963, 'lon': 31.039929, 'how': 'shared point', 'crossings': 2, 'used': 2, 'moved_m': 160}
+{"ok": true, "types": ["node", "node", "sep", "node", "node", "node", "node", "sep", "node", "node", "sep"]}
