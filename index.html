@@ -192,7 +192,7 @@ footer{font-size:13px;color:var(--muted)}
 
   <section aria-label="Camera robots">
     <h2>Camera robots</h2>
-    <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Positions are estimates: tap Check on map, and fix any that sit in the wrong place.</p>
+    <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Most positions come from map data. Any marked as estimated may be a few hundred metres out, so check those on the map.</p>
     <div class="row">
       <button class="primary" id="fixBtn" type="button">Fix positions from map data</button>
     </div>
@@ -273,22 +273,24 @@ footer{font-size:13px;color:var(--muted)}
 (function(){
   "use strict";
   // src: "official" = named by officials or The Herald; "reported" = raised in media reports.
-  // All positions are estimates until the user confirms them.
+  // Positions marked osm come from OpenStreetMap: the point where the two named roads meet
+  // (looked up by tools/lookup/lookup.py). Cripps & Remembrance is still a rough estimate,
+  // because those two roads do not meet on the map.
   var DEFAULTS=[
-    {n:"Jason Moyo Ave & Simon Muzenda St",lat:-17.8302,lon:31.0545,src:"official"},
-    {n:"Samora Machel Ave & Simon Muzenda St",lat:-17.8262,lon:31.0545,src:"official"},
-    {n:"Julius Nyerere Way & Jason Moyo Ave",lat:-17.8302,lon:31.0471,src:"official"},
-    {n:"Leopold Takawira St & Herbert Chitepo Ave",lat:-17.8235,lon:31.0428,src:"official"},
-    {n:"Sam Nujoma St & Josiah Tongogara Ave",lat:-17.8192,lon:31.0510,src:"official"},
-    {n:"Churchill Ave & Sam Nujoma St",lat:-17.7915,lon:31.0462,src:"official"},
-    {n:"Samora Machel Ave & Bishop Gaul Ave",lat:-17.8258,lon:31.0235,src:"official"},
-    {n:"Samora Machel Ave & Glenara Ave",lat:-17.8245,lon:31.0855,src:"official"},
-    {n:"Glenara Ave & Chiremba Rd",lat:-17.8485,lon:31.0815,src:"official"},
-    {n:"Robert Mugabe Rd & Abdel Gamal Nasser Rd",lat:-17.8322,lon:31.0385,src:"official"},
+    {n:"Jason Moyo Ave & Simon Muzenda St",lat:-17.829589,lon:31.054806,src:"official",fixed:true,osm:true},
+    {n:"Samora Machel Ave & Simon Muzenda St",lat:-17.825497,lon:31.053769,src:"official",fixed:true,osm:true},
+    {n:"Julius Nyerere Way & Jason Moyo Ave",lat:-17.83142,lon:31.046783,src:"official",fixed:true,osm:true},
+    {n:"Leopold Takawira St & Herbert Chitepo Ave",lat:-17.82289,lon:31.043779,src:"official",fixed:true,osm:true},
+    {n:"Sam Nujoma St & Josiah Tongogara Ave",lat:-17.815996,lon:31.047793,src:"official",fixed:true,osm:true},
+    {n:"Churchill Ave & Sam Nujoma St",lat:-17.791937,lon:31.043716,src:"official",fixed:true,osm:true},
+    {n:"Samora Machel Ave & Bishop Gaul Ave",lat:-17.827742,lon:31.019863,src:"official",fixed:true,osm:true},
+    {n:"Samora Machel Ave & Glenara Ave",lat:-17.823978,lon:31.092088,src:"official",fixed:true,osm:true},
+    {n:"Glenara Ave & Chiremba Rd",lat:-17.844813,lon:31.074575,src:"official",fixed:true,osm:true},
+    {n:"Robert Mugabe Rd & Abdel Gamal Nasser Rd",lat:-17.833784,lon:31.038764,src:"official",fixed:true,osm:true},
     {n:"Cripps Rd & Remembrance Dr",lat:-17.8498,lon:31.0412,src:"official"},
-    {n:"Seke Rd & Cripps Rd",lat:-17.8480,lon:31.0535,src:"reported"},
-    {n:"Samora Machel Ave & Abdel Gamal Nasser Rd",lat:-17.8289,lon:31.0404,src:"reported"},
-    {n:"Jason Moyo Ave & Abdel Gamal Nasser Rd",lat:-17.8300,lon:31.0388,src:"reported"}
+    {n:"Seke Rd & Cripps Rd",lat:-17.852632,lon:31.0536,src:"reported",fixed:true,osm:true},
+    {n:"Samora Machel Ave & Abdel Gamal Nasser Rd",lat:-17.828773,lon:31.03999,src:"reported",fixed:true,osm:true},
+    {n:"Jason Moyo Ave & Abdel Gamal Nasser Rd",lat:-17.830963,lon:31.039929,src:"reported",fixed:true,osm:true}
   ];
   var KEY="robotwatch.cams.v1";
   var $=function(id){return document.getElementById(id);};
@@ -306,7 +308,14 @@ footer{font-size:13px;color:var(--muted)}
 
   function clone(a){return JSON.parse(JSON.stringify(a));}
   function load(){
-    try{var s=localStorage.getItem(KEY); if(s){var a=JSON.parse(s); if(Array.isArray(a)&&a.length) return a;}}catch(e){}
+    try{var s=localStorage.getItem(KEY); if(s){var a=JSON.parse(s); if(Array.isArray(a)&&a.length){
+      // upgrade any saved pin that is still an estimate to the built-in map position
+      a.forEach(function(c){
+        if(c.fixed) return;
+        DEFAULTS.forEach(function(d){if(d.fixed&&d.n===c.n){c.lat=d.lat;c.lon=d.lon;c.fixed=true;c.osm=true;}});
+      });
+      return a;
+    }}}catch(e){}
     return clone(DEFAULTS);
   }
   function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed,osm:!!c.osm};})));}catch(e){} syncNative();}
