@@ -376,7 +376,7 @@ footer{font-size:13px;color:var(--muted)}
     </details>
   </section>
 
-  <footer class="when-parked">Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice.</footer>
+  <footer class="when-parked">Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice. <span id="ver">Web version</span></footer>
 </main>
 
 <script src="vendor/leaflet.js"></script>
@@ -1045,6 +1045,7 @@ footer{font-size:13px;color:var(--muted)}
   try{window.addEventListener("resize",drawView);if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawView);}catch(e){}
   try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(){if(prefs.theme==="auto") applyTheme();});}catch(e){}
   if(NATIVE){
+    try{if(window.Android.appVersion) $("ver").textContent="App version "+window.Android.appVersion();}catch(e){}
     $("watchRow").hidden=false;
     syncNative();
     $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive. For watch vibration, allow RoboWatch notifications in your watch app.";
