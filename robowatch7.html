@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboWatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one scrolling phone column. A big road-sign style status panel on top,
+   then the camera list, then the rules. */
+:root{
+  --road:#f1f2f0;      /* page */
+  --panel:#ffffff;     /* cards */
+  --ink:#1c2226;       /* text */
+  --muted:#5c676e;     /* secondary text */
+  --line:#d5d9d6;      /* borders */
+  --accent:#0b5c8a;    /* controls, links */
+  --accent-ink:#ffffff;
+  --go:#1d7a46; --go-bg:#e3f3e9;
+  --warn:#8a5a00; --warn-bg:#fdf0cf;
+  --stop:#b3261e; --stop-bg:#fde5e2;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --road:#14181b; --panel:#1e2428; --ink:#eef1ef; --muted:#a3adb2; --line:#343c41;
+    --accent:#6cbcec; --accent-ink:#0c1a22;
+    --go:#6fd49a; --go-bg:#173324;
+    --warn:#f2c35a; --warn-bg:#3a2e0e;
+    --stop:#ff8f86; --stop-bg:#45191a;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --road:#14181b; --panel:#1e2428; --ink:#eef1ef; --muted:#a3adb2; --line:#343c41;
+  --accent:#6cbcec; --accent-ink:#0c1a22;
+  --go:#6fd49a; --go-bg:#173324;
+  --warn:#f2c35a; --warn-bg:#3a2e0e;
+  --stop:#ff8f86; --stop-bg:#45191a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+main,main *{min-width:0}
+main{width:100%;overflow-wrap:anywhere}
+body{background:var(--road);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+main{max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:30px;letter-spacing:.01em}
+h2{font-size:24px}
+h3{font-size:19px}
+p{margin:0}
+a{color:var(--accent)}
+.sub{color:var(--muted);font-size:14px}
+header{display:flex;flex-direction:column;gap:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+section{display:flex;flex-direction:column;gap:12px}
+
+/* status panel */
+#status{border-radius:14px;padding:18px 16px;border:2px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+#status[data-state="watch"]{border-color:var(--go);background:var(--go-bg)}
+#status[data-state="near"]{border-color:var(--warn);background:var(--warn-bg)}
+#status[data-state="alert"]{border-color:var(--stop);background:var(--stop-bg)}
+#stateLabel{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#status[data-state="watch"] #stateLabel{color:var(--go)}
+#status[data-state="near"] #stateLabel{color:var(--warn)}
+#status[data-state="alert"] #stateLabel{color:var(--stop)}
+#headline{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+#where{font-size:17px;font-weight:600}
+#meta{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.checks{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.checks li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-weight:600;font-size:15px}
+
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:12px 16px;min-height:48px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 150px}
+button.small{min-height:40px;padding:8px 12px;font-size:14px}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+select,input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%}
+.inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:15px}
+.inline input{width:22px;height:22px}
+.note{font-size:14px;border-left:4px solid var(--warn);background:var(--warn-bg);padding:10px 12px;border-radius:6px}
+.note:empty{display:none}
+[hidden]{display:none!important}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.steps span{color:var(--muted);font-variant-numeric:tabular-nums}
+#routeSum{font-weight:500}
+
+/* cameras */
+#camList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+#camList li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.camName{font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted)}
+.tag.ok{color:var(--go);border-color:var(--go)}
+.tag.rough{color:var(--warn);border-color:var(--warn)}
+.dist{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* rules */
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.rules li{border-left:4px solid var(--accent);padding:2px 0 2px 12px}
+.rules b{display:block}
+.src{font-size:13px;color:var(--muted);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px}
+footer{font-size:13px;color:var(--muted)}
+@media (max-width:360px){.checks{grid-template-columns:1fr}#headline{font-size:34px}}
+@media (prefers-reduced-motion:no-preference){#status{transition:background .25s,border-color .25s}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>RoboWatch</h1>
+    <p class="sub">Harare camera robots: a heads-up before each one, and a route around them when there is one.</p>
+  </header>
+
+  <section aria-label="Drive">
+    <div id="status" data-state="idle" aria-live="assertive">
+      <div id="stateLabel">Not driving</div>
+      <div id="headline">Ready</div>
+      <div id="where">Start before you move off, then leave the phone alone.</div>
+      <div id="meta">14 camera robots loaded</div>
+      <ul class="checks" aria-label="At every camera robot">
+        <li>Phone down</li>
+        <li>Belts on</li>
+        <li>Stop behind the line</li>
+        <li>Keep the junction clear</li>
+      </ul>
+    </div>
+
+    <div class="row">
+      <button class="primary" id="startBtn" type="button">Start drive</button>
+      <button id="demoBtn" type="button">Run a demo drive</button>
+    </div>
+    <p id="note" class="note" role="status"></p>
+
+    <div class="card">
+      <div class="grid2">
+        <label for="radius">Warn me this far ahead
+          <select id="radius">
+            <option value="250">250 m</option>
+            <option value="400" selected>400 m</option>
+            <option value="600">600 m</option>
+          </select>
+        </label>
+        <label class="inline" for="voice" style="align-self:end;min-height:44px">
+          <input type="checkbox" id="voice" checked> Speak the alert
+        </label>
+      </div>
+      <p class="sub">Mount the phone and turn the volume up. Alerts are spoken so you never need to look at or touch the screen while driving.</p>
+    </div>
+  </section>
+
+  <section aria-label="Route around cameras">
+    <h2>Route around cameras</h2>
+    <p class="sub">Say where you are going. RoboWatch looks for a route that stays clear of every camera robot on your list, and tells you what the detour costs. Patrol cars carry cameras too, so the rules apply on every road.</p>
+    <div class="card">
+      <label for="from">From
+        <input type="text" id="from" placeholder="Leave empty to use my location" autocomplete="off">
+      </label>
+      <label for="to">To
+        <input type="text" id="to" placeholder="e.g. Avondale Shopping Centre" autocomplete="off">
+      </label>
+      <div class="row">
+        <button class="primary" id="routeBtn" type="button">Find a camera-free route</button>
+      </div>
+      <p id="routeNote" class="note" role="status"></p>
+      <label for="orsKey">Routing key
+        <input type="text" id="orsKey" placeholder="Paste your OpenRouteService key" autocomplete="off" spellcheck="false">
+      </label>
+      <p class="sub">Routes come from <a href="https://openrouteservice.org">OpenRouteService</a>. Sign up there for a free key and paste it here once. It is saved on this phone only.</p>
+    </div>
+    <div class="card" id="routeOut" hidden>
+      <h3 id="routeTitle"></h3>
+      <p id="routeSum"></p>
+      <a id="routeMap" target="_blank" rel="noopener">Open this route in Google Maps</a>
+      <ol class="steps" id="routeSteps"></ol>
+    </div>
+  </section>
+
+  <section aria-label="Camera robots">
+    <h2>Camera robots</h2>
+    <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Positions are estimates: tap Check on map, and fix any that sit in the wrong place.</p>
+    <div class="row">
+      <button class="primary" id="fixBtn" type="button">Fix positions from map data</button>
+    </div>
+    <p id="camNote" class="note" role="status"></p>
+    <ul id="camList"></ul>
+    <div class="card">
+      <h3>Add a camera robot</h3>
+      <label for="newName">Intersection
+        <input type="text" id="newName" placeholder="e.g. Seke Rd &amp; Dieppe Rd" autocomplete="off">
+      </label>
+      <div class="grid2">
+        <label for="newLat">Latitude
+          <input type="number" id="newLat" step="any" placeholder="-17.8300" inputmode="decimal">
+        </label>
+        <label for="newLon">Longitude
+          <input type="number" id="newLon" step="any" placeholder="31.0500" inputmode="decimal">
+        </label>
+      </div>
+      <div class="row">
+        <button class="small" id="addBtn" type="button">Add to my list</button>
+        <button class="small" id="resetBtn" type="button">Restore the original list</button>
+      </div>
+      <p class="sub">To get coordinates, press and hold the spot in Google Maps and copy the two numbers it shows.</p>
+    </div>
+  </section>
+
+  <section aria-label="Rules">
+    <h2>Staying on the right side of the law</h2>
+    <div class="card">
+      <h3>What the cameras catch, and what to do instead</h3>
+      <ul class="rules">
+        <li><b>Red robot</b>Stop behind the white stop line and wait for green. Treat amber as stop unless braking would be unsafe. Police say red-light cases are likely to go to court instead of a fine.</li>
+        <li><b>Blocking the junction</b>Do not stop on the pedestrian crossing or inside the intersection. Enter only when your exit is clear.</li>
+        <li><b>Phone in hand</b>Holding or using a phone while driving is an offence. Set your route and this app before you move.</li>
+        <li><b>Seatbelts</b>Driver and passengers buckle up before the car moves.</li>
+        <li><b>Wrong side of the road</b>Never jump the queue by driving against oncoming traffic. Stay in your lane and turn only from the correct one.</li>
+        <li><b>Speed</b>Keep to the posted limit. In town that is generally 60 km/h unless a sign says lower.</li>
+        <li><b>Picking up and dropping off</b>Use designated stops and ranks, not the junction.</li>
+        <li><b>Officer on point duty</b>Follow the officer's signals even against the light. Police have said you will not be penalised for doing so.</li>
+        <li><b>On foot</b>Cross at marked crossings. Police say pedestrians are being watched too.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>If a notice arrives</h3>
+      <ul class="rules">
+        <li><b>How it reaches you</b>An SMS to the registered owner with a video clip and the fine. Officers review each clip before a ticket goes out.</li>
+        <li><b>Where to check</b>Only at <a href="https://www.paymyfines.co.zw">paymyfines.co.zw</a> or <a href="https://www.paymyfines.gov.zw">paymyfines.gov.zw</a>, or at a police traffic station such as Harare Central, Avondale, Warren Park, Milton Park, Marlborough, Mabelreign, Mbare or Chitungwiza. Treat any other link as a scam.</li>
+        <li><b>What it costs</b>Most of these offences carry the standard US$30 deposit fine, payable in ZiG. Check the notice for your exact amount.</li>
+        <li><b>Do not ignore it</b>Police warn that unanswered tickets can lead to blacklisting and a warrant of arrest.</li>
+        <li><b>Sold your car?</b>Change ownership within two weeks, or the new driver's tickets come to you.</li>
+      </ul>
+    </div>
+    <ul class="src" aria-label="Sources">
+      <li><a href="https://www.heraldonline.co.zw/zrp-rolls-out-digital-traffic-fine-notifications-48-million-violators-caught-on-camera/">The Herald, 18 Oct 2026: digital fine notifications</a></li>
+      <li><a href="https://www.zimdaily.com/article/news-2026-10-18-traffic-cameras-4-8-million/">ZimDaily, 18 Oct 2026: where to check fines</a></li>
+      <li><a href="https://www.heraldonline.co.zw/smart-sharp-eyes-on-harares-roads-motorists-jaywalkers-in-for-a-shock/">The Herald, Nov 2026: junctions under watch</a></li>
+      <li><a href="https://www.newzimbabwe.com/zrp-shoots-down-rumours-of-traffic-fine-waiver-at-harare-crime-hotspots/">NewZimbabwe, Nov 2026: junctions raised by motorists</a></li>
+      <li><a href="https://www.myzimbabwe.co.zw/news/192118-smart-traffic-management-system-motorists-who-failed-to-change-vehicle-ownership-and-those-ignoring-camera-tickets-now-in-hot-soup.html">MyZimbabwe, Oct 2026: ignored tickets and ownership</a></li>
+    </ul>
+  </section>
+
+  <footer>Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice.</footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  // src: "official" = named by officials or The Herald; "reported" = raised in media reports.
+  // All positions are estimates until the user confirms them.
+  var DEFAULTS=[
+    {n:"Jason Moyo Ave & Simon Muzenda St",lat:-17.8302,lon:31.0545,src:"official"},
+    {n:"Samora Machel Ave & Simon Muzenda St",lat:-17.8262,lon:31.0545,src:"official"},
+    {n:"Julius Nyerere Way & Jason Moyo Ave",lat:-17.8302,lon:31.0471,src:"official"},
+    {n:"Leopold Takawira St & Herbert Chitepo Ave",lat:-17.8235,lon:31.0428,src:"official"},
+    {n:"Sam Nujoma St & Josiah Tongogara Ave",lat:-17.8192,lon:31.0510,src:"official"},
+    {n:"Churchill Ave & Sam Nujoma St",lat:-17.7915,lon:31.0462,src:"official"},
+    {n:"Samora Machel Ave & Bishop Gaul Ave",lat:-17.8258,lon:31.0235,src:"official"},
+    {n:"Samora Machel Ave & Glenara Ave",lat:-17.8245,lon:31.0855,src:"official"},
+    {n:"Glenara Ave & Chiremba Rd",lat:-17.8485,lon:31.0815,src:"official"},
+    {n:"Robert Mugabe Rd & Abdel Gamal Nasser Rd",lat:-17.8322,lon:31.0385,src:"official"},
+    {n:"Cripps Rd & Remembrance Dr",lat:-17.8498,lon:31.0412,src:"official"},
+    {n:"Seke Rd & Cripps Rd",lat:-17.8480,lon:31.0535,src:"reported"},
+    {n:"Samora Machel Ave & Abdel Gamal Nasser Rd",lat:-17.8289,lon:31.0404,src:"reported"},
+    {n:"Jason Moyo Ave & Abdel Gamal Nasser Rd",lat:-17.8300,lon:31.0388,src:"reported"}
+  ];
+  var KEY="robotwatch.cams.v1";
+  var $=function(id){return document.getElementById(id);};
+  var cams=load();
+  var watchId=null, demoTimer=null, wake=null, audio=null, lastPos=null;
+
+  function clone(a){return JSON.parse(JSON.stringify(a));}
+  function load(){
+    try{var s=localStorage.getItem(KEY); if(s){var a=JSON.parse(s); if(Array.isArray(a)&&a.length) return a;}}catch(e){}
+    return clone(DEFAULTS);
+  }
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed,osm:!!c.osm};})));}catch(e){}}
+
+  function dist(aLat,aLon,bLat,bLon){
+    var R=6371000,r=Math.PI/180;
+    var dLat=(bLat-aLat)*r,dLon=(bLon-aLon)*r;
+    var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(aLat*r)*Math.cos(bLat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return 2*R*Math.asin(Math.sqrt(x));
+  }
+  function fmt(m){return m<1000?(Math.round(m/10)*10)+" m":(m/1000).toFixed(1)+" km";}
+  function radius(){return parseInt($("radius").value,10)||400;}
+
+  function setStatus(state,label,headline,where,meta){
+    $("status").setAttribute("data-state",state);
+    $("stateLabel").textContent=label;
+    $("headline").textContent=headline;
+    $("where").textContent=where;
+    $("meta").textContent=meta;
+  }
+  function note(t){$("note").textContent=t||"";}
+
+  function beep(){
+    try{
+      if(!audio) return;
+      [0,0.28].forEach(function(t){
+        var o=audio.createOscillator(),g=audio.createGain();
+        o.frequency.value=880;o.connect(g);g.connect(audio.destination);
+        g.gain.setValueAtTime(0.25,audio.currentTime+t);
+        g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+t+0.2);
+        o.start(audio.currentTime+t);o.stop(audio.currentTime+t+0.22);
+      });
+    }catch(e){}
+  }
+  function say(text){
+    if(!$("voice").checked) return;
+    try{
+      if(!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    }catch(e){}
+  }
+  function fire(cam){
+    beep();
+    try{if(navigator.vibrate) navigator.vibrate([200,100,200]);}catch(e){}
+    say("Camera robot ahead. "+cam.n.replace(/&/g,"and")+". Phone down, belts on, stop behind the line.");
+  }
+
+  // Core: called with every position fix, real or demo.
+  var anchor=null,heading=null;
+  function bearing(aLat,aLon,bLat,bLon){
+    var r=Math.PI/180,y=Math.sin((bLon-aLon)*r)*Math.cos(bLat*r);
+    var x=Math.cos(aLat*r)*Math.sin(bLat*r)-Math.sin(aLat*r)*Math.cos(bLat*r)*Math.cos((bLon-aLon)*r);
+    return (Math.atan2(y,x)/r+360)%360;
+  }
+  function onFix(lat,lon,speedMs,isDemo){
+    lastPos={lat:lat,lon:lon};
+    // direction of travel, refreshed every 20 m moved
+    if(!anchor) anchor={lat:lat,lon:lon};
+    else if(dist(anchor.lat,anchor.lon,lat,lon)>=20){heading=bearing(anchor.lat,anchor.lon,lat,lon);anchor={lat:lat,lon:lon};}
+    var r=radius(),best=null,bestD=Infinity,ahead=null,aheadD=Infinity;
+    cams.forEach(function(c){
+      var d=dist(lat,lon,c.lat,c.lon);
+      c._d=d;
+      if(c._passed){
+        if(d>c._max) c._max=d;
+        // forget "passed" once it is far behind, or if we turn round and head back to it
+        if(d>2000||d<c._max-150){c._passed=false;c._in=false;}
+      }
+      if(!c._passed){
+        if(d<=r&&!c._in){c._in=true;c._min=d;fire(c);}
+        if(c._in){
+          if(d<c._min) c._min=d;
+          // 100 m beyond the closest point: this one is done, look for the next
+          if(d>=c._min+100){c._passed=true;c._in=false;c._max=d;}
+        }
+      }
+      if(c._passed) return;
+      if(d<bestD){bestD=d;best=c;}
+      var isAhead=c._in||heading===null||Math.abs(((bearing(lat,lon,c.lat,c.lon)-heading+540)%360)-180)<=100;
+      if(isAhead&&d<aheadD){aheadD=d;ahead=c;}
+    });
+    var t=ahead||best,tD=ahead?aheadD:bestD,word=ahead?"Next: ":"Nearest: ";
+    var kmh=(typeof speedMs==="number"&&speedMs>=0)?Math.round(speedMs*3.6)+" km/h":"";
+    var tail=(isDemo?"Demo drive":"Live GPS")+(kmh?" · "+kmh:"");
+    if(!t){setStatus("watch","Watching","Clear","No more camera robots nearby on your list.",tail);}
+    else if(tD<=r){setStatus("alert","Camera robot ahead",fmt(tD),t.n,tail);}
+    else if(tD<=r*2.5){setStatus("near","Coming up",fmt(tD),t.n,tail);}
+    else{setStatus("watch","Watching","Clear",word+t.n+", "+fmt(tD),tail);}
+    renderDistances();
+  }
+
+  function stopAll(){
+    if(watchId!==null){try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null;}
+    if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+    if(wake){try{wake.release();}catch(e){} wake=null;}
+    cams.forEach(function(c){c._in=false;c._passed=false;});anchor=null;heading=null;
+    $("startBtn").textContent="Start drive";
+    $("demoBtn").textContent="Run a demo drive";
+    setStatus("idle","Not driving","Ready","Start before you move off, then leave the phone alone.",cams.length+" camera robots loaded");
+  }
+  function prime(){
+    try{audio=audio||new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended") audio.resume();}catch(e){}
+    try{if(navigator.wakeLock) navigator.wakeLock.request("screen").then(function(w){wake=w;}).catch(function(){});}catch(e){}
+  }
+
+  $("startBtn").addEventListener("click",function(){
+    if(watchId!==null||demoTimer){stopAll();note("");return;}
+    prime();note("");
+    var blocked="Live GPS is blocked in this preview. It will work once the page is published at its own https address. Use the demo drive for now.";
+    if(!navigator.geolocation){note(blocked);return;}
+    setStatus("watch","Watching","Finding you","Waiting for a GPS fix.","Live GPS");
+    $("startBtn").textContent="Stop";
+    try{
+      watchId=navigator.geolocation.watchPosition(function(p){
+        onFix(p.coords.latitude,p.coords.longitude,p.coords.speed,false);
+      },function(err){
+        stopAll();
+        note(err&&err.code===1?blocked+" If you are already on your own address, allow location for this page in your browser settings.":"No GPS fix. Check that location is switched on, then try again.");
+      },{enableHighAccuracy:true,maximumAge:2000,timeout:20000});
+    }catch(e){stopAll();note(blocked);}
+  });
+
+  $("demoBtn").addEventListener("click",function(){
+    if(demoTimer||watchId!==null){stopAll();note("");return;}
+    if(!cams.length){note("Add a camera robot first.");return;}
+    prime();note("This is a simulated drive toward "+cams[0].n+". No GPS is used.");
+    var c=cams[0],start=1300,step=45,m=start;
+    $("demoBtn").textContent="Stop demo";
+    function tick(){
+      // approach from the west along the same latitude, pass through, carry on east
+      var dLon=(m/111320)/Math.cos(c.lat*Math.PI/180);
+      onFix(c.lat,c.lon-dLon,12.5,true);
+      m-=step;
+      if(m<-500){stopAll();note("Demo finished.");}
+    }
+    tick();demoTimer=setInterval(tick,700);
+  });
+
+  // ----- camera list -----
+  function renderDistances(){
+    cams.forEach(function(c,i){
+      var el=document.querySelector('[data-dist="'+i+'"]');
+      if(el) el.textContent=(typeof c._d==="number")?fmt(c._d)+" from you":"";
+    });
+  }
+  function render(){
+    var ul=$("camList");ul.textContent="";
+    cams.forEach(function(c,i){
+      var li=document.createElement("li");
+      var name=document.createElement("div");name.className="camName";name.textContent=c.n;
+      var tags=document.createElement("div");tags.className="tags";
+      var t1=document.createElement("span");t1.className="tag";
+      t1.textContent=c.src==="official"?"Named by officials":c.src==="reported"?"Reported in media":"Added by you";
+      var t2=document.createElement("span");
+      t2.className="tag "+(c.fixed?"ok":"rough");
+      t2.textContent=c.fixed?(c.osm?"Position from map data":"Position confirmed"):"Position estimated";
+      tags.appendChild(t1);tags.appendChild(t2);
+      var d=document.createElement("div");d.className="dist";d.setAttribute("data-dist",i);
+      var row=document.createElement("div");row.className="row";
+      var map=document.createElement("a");
+      map.href="https://www.google.com/maps/search/?api=1&query="+c.lat+","+c.lon;
+      map.target="_blank";map.rel="noopener";map.textContent="Check on map";
+      var here=document.createElement("button");here.type="button";here.className="small";here.textContent="I am here now";
+      here.addEventListener("click",function(){
+        if(!lastPos||demoTimer){note("Start a live drive first, then tap this while stopped at the robot.");return;}
+        c.lat=lastPos.lat;c.lon=lastPos.lon;c.fixed=true;c.osm=false;save();render();note("Saved your position for "+c.n+".");
+      });
+      var ok=document.createElement("button");ok.type="button";ok.className="small";ok.textContent=c.fixed?"Mark as unsure":"Looks right";
+      ok.addEventListener("click",function(){c.fixed=!c.fixed;save();render();});
+      var del=document.createElement("button");del.type="button";del.className="small";del.textContent="Remove";
+      del.addEventListener("click",function(){cams.splice(i,1);save();render();updateIdle();});
+      row.appendChild(map);row.appendChild(ok);row.appendChild(here);row.appendChild(del);
+      li.appendChild(name);li.appendChild(tags);li.appendChild(d);li.appendChild(row);
+      ul.appendChild(li);
+    });
+    renderDistances();
+  }
+  function updateIdle(){
+    if(watchId===null&&!demoTimer) $("meta").textContent=cams.length+" camera robots loaded";
+  }
+  $("addBtn").addEventListener("click",function(){
+    var n=$("newName").value.trim(),la=parseFloat($("newLat").value),lo=parseFloat($("newLon").value);
+    if(!n||isNaN(la)||isNaN(lo)||la<-90||la>90||lo<-180||lo>180){note("Enter a name plus a valid latitude and longitude, for example -17.8300 and 31.0500.");return;}
+    cams.push({n:n,lat:la,lon:lo,src:"user",fixed:true});save();render();updateIdle();
+    $("newName").value="";$("newLat").value="";$("newLon").value="";note("Added "+n+".");
+  });
+  $("resetBtn").addEventListener("click",function(){
+    cams=clone(DEFAULTS);save();render();updateIdle();note("Original list restored.");
+  });
+
+  // ----- route around cameras -----
+  // Uses OpenRouteService. The Claude preview blocks outside requests, so this runs
+  // only once the page is hosted at its own https address.
+  var ORS="https://api.openrouteservice.org", KKEY="robowatch.orskey";
+  try{$("orsKey").value=localStorage.getItem(KKEY)||"";}catch(e){}
+  function rnote(t){$("routeNote").textContent=t||"";}
+  function ring(c,rad){ // octagon around a camera, as [lon,lat] points
+    var pts=[],i,a,dLat=rad/111320,dLon=dLat/Math.cos(c.lat*Math.PI/180);
+    for(i=0;i<8;i++){a=i*Math.PI/4;pts.push([c.lon+dLon*Math.cos(a),c.lat+dLat*Math.sin(a)]);}
+    pts.push(pts[0]);return [pts];
+  }
+  function segDist(p,a,b){ // metres from point p to the segment a-b, all [lon,lat]
+    var k=111320,cos=Math.cos(p[1]*Math.PI/180);
+    var ax=(a[0]-p[0])*k*cos,ay=(a[1]-p[1])*k,bx=(b[0]-p[0])*k*cos,by=(b[1]-p[1])*k;
+    var dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy,t=L?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L)):0;
+    var x=ax+t*dx,y=ay+t*dy;return Math.sqrt(x*x+y*y);
+  }
+  function camsOn(line){
+    return cams.filter(function(c){
+      for(var i=1;i<line.length;i++){if(segDist([c.lon,c.lat],line[i-1],line[i])<120) return true;}
+      return false;
+    });
+  }
+  function apiErr(msg){var e=new Error(msg);e.api=true;return e;}
+  function api(path,key,body){
+    var opt=body?{method:"POST",headers:{"Authorization":key,"Content-Type":"application/json"},body:JSON.stringify(body)}:{method:"GET"};
+    return fetch(ORS+path,opt).then(function(r){
+      return r.json().catch(function(){return null;}).then(function(j){
+        if(!r.ok){
+          if(r.status===401||r.status===403) throw apiErr("The routing key was not accepted. Check that you pasted the whole key.");
+          var m=j&&j.error&&(j.error.message||j.error);
+          throw apiErr(typeof m==="string"?m:"The routing service returned an error ("+r.status+").");
+        }
+        return j;
+      });
+    });
+  }
+  function place(text,key){
+    var m=text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if(m) return Promise.resolve({pt:[parseFloat(m[2]),parseFloat(m[1])],label:text});
+    var q="/geocode/search?api_key="+encodeURIComponent(key)+"&size=1&boundary.country=ZW&focus.point.lat=-17.83&focus.point.lon=31.05&text="+encodeURIComponent(text+", Harare");
+    return api(q,key,null).then(function(j){
+      var f=j&&j.features&&j.features[0];
+      if(!f) throw apiErr("Could not find \""+text+"\". Try a street, suburb or landmark name.");
+      return {pt:f.geometry.coordinates,label:(f.properties&&f.properties.label)||text};
+    });
+  }
+  function whereAmI(){
+    if(lastPos&&!demoTimer) return Promise.resolve({pt:[lastPos.lon,lastPos.lat],label:"Your location"});
+    return new Promise(function(res,rej){
+      if(!navigator.geolocation){rej(new Error("gps"));return;}
+      navigator.geolocation.getCurrentPosition(function(p){res({pt:[p.coords.longitude,p.coords.latitude],label:"Your location"});},
+        function(){rej(new Error("gps"));},{enableHighAccuracy:true,timeout:15000});
+    });
+  }
+  function route(a,b,key,avoid){
+    var body={coordinates:[a,b],instructions:true};
+    if(avoid&&cams.length) body.options={avoid_polygons:{type:"MultiPolygon",coordinates:cams.map(function(c){return ring(c,150);})}};
+    return api("/v2/directions/driving-car/geojson",key,body).then(function(j){
+      var f=j.features[0],p=f.properties;
+      return {line:f.geometry.coordinates,km:p.summary.distance/1000,min:p.summary.duration/60,
+        steps:(p.segments||[]).reduce(function(s,g){return s.concat(g.steps||[]);},[])};
+    });
+  }
+  function names(list){return list.map(function(c){return c.n;}).join("; ");}
+  function mapsLink(a,b,line){
+    var way=[],n=Math.min(8,Math.max(0,line.length-2)),i,p;
+    for(i=1;i<=n;i++){p=line[Math.round(i*(line.length-1)/(n+1))];way.push(p[1].toFixed(5)+","+p[0].toFixed(5));}
+    return "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin="+a[1]+","+a[0]+"&destination="+b[1]+","+b[0]+(way.length?"&waypoints="+way.join("%7C"):"");
+  }
+  function show(A,B,direct,by,hit){
+    var use=by||direct,title,sum;
+    if(!hit.length){
+      title="No camera robots on your way";
+      sum="The usual route to "+B.label+" is "+direct.km.toFixed(1)+" km, about "+Math.round(direct.min)+" min, and passes none of the camera robots on your list.";
+    }else if(by){
+      var left=camsOn(by.line);
+      title=left.length?"Partial bypass found":"Bypass found";
+      sum="This route to "+B.label+" is "+by.km.toFixed(1)+" km, about "+Math.round(by.min)+" min. That is "+Math.max(0,by.km-direct.km).toFixed(1)+" km and "+Math.max(0,Math.round(by.min-direct.min))+" min more than the usual route, which passes "+hit.length+" camera robot"+(hit.length>1?"s":"")+": "+names(hit)+"."+(left.length?" It still passes close to: "+names(left)+".":"");
+    }else{
+      title="No bypass available";
+      sum="No route avoids every camera robot on your list, often because your start or destination sits right beside one. The usual route is "+direct.km.toFixed(1)+" km, about "+Math.round(direct.min)+" min, and passes: "+names(hit)+". Drive it by the book.";
+    }
+    $("routeTitle").textContent=title;$("routeSum").textContent=sum;
+    $("routeMap").href=mapsLink(A.pt,B.pt,use.line);
+    var ol=$("routeSteps");ol.textContent="";
+    use.steps.forEach(function(s){
+      var li=document.createElement("li");li.textContent=s.instruction+" ";
+      var sp=document.createElement("span");sp.textContent=s.distance?fmt(s.distance):"";
+      li.appendChild(sp);ol.appendChild(li);
+    });
+    $("routeOut").hidden=false;rnote("");
+  }
+  $("routeBtn").addEventListener("click",function(){
+    var key=$("orsKey").value.trim(),from=$("from").value.trim(),to=$("to").value.trim(),A,B;
+    $("routeOut").hidden=true;
+    if(!to){rnote("Type where you are going.");return;}
+    if(!key){rnote("Paste your free OpenRouteService key in the Routing key box first.");return;}
+    try{localStorage.setItem(KKEY,key);}catch(e){}
+    rnote("Working out your route.");
+    (from?place(from,key):whereAmI()).then(function(a){A=a;return place(to,key);})
+    .then(function(b){B=b;return route(A.pt,B.pt,key,false);})
+    .then(function(direct){
+      var hit=camsOn(direct.line);
+      if(!hit.length){show(A,B,direct,null,hit);return;}
+      return route(A.pt,B.pt,key,true).then(function(by){show(A,B,direct,by,hit);},function(){show(A,B,direct,null,hit);});
+    })
+    .catch(function(e){
+      if(e&&e.message==="gps") rnote("Could not get your location. Type a starting point in the From box instead.");
+      else if(e&&e.api) rnote(e.message);
+      else rnote("The routing service could not be reached. It is blocked in this preview and works once RoboWatch is on its own web address.");
+    });
+  });
+
+  // ----- fix camera positions from OpenStreetMap (Overpass) -----
+  // Looks up where the two named roads of each junction actually meet.
+  var BOX="(-17.95,30.95,-17.70,31.20)";
+  var ALT=[["muzenda","Muzenda|Fourth Street|4th Street"],["abdel gamal nasser","Abdel Gamal Nasser|Rotten Row"],
+           ["rotten row","Abdel Gamal Nasser|Rotten Row"],["sam nujoma","Sam Nujoma|Second Street"],["seke","^Seke R"]];
+  function roadRe(part){
+    var p=part.trim().replace(/\s+(ave|avenue|st|street|rd|road|dr|drive|way)\.?$/i,""),low=p.toLowerCase(),i;
+    for(i=0;i<ALT.length;i++){if(low.indexOf(ALT[i][0])>=0) return ALT[i][1];}
+    return p.replace(/[^A-Za-z0-9 '\-]/g,"");
+  }
+  function cnote(t){$("camNote").textContent=t||"";}
+  function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  var HOSTS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+  // One request with a hard time limit, so a silent server can never leave the app waiting.
+  function post(url,q,ms){
+    var ctl=("AbortController" in window)?new AbortController():null;
+    var t=setTimeout(function(){if(ctl) ctl.abort();},ms);
+    return fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q),signal:ctl?ctl.signal:undefined})
+      .then(function(r){
+        if(!r.ok){var e=new Error("http");e.status=r.status;throw e;}
+        return r.json();
+      })
+      .then(function(j){clearTimeout(t);return j;},function(e){clearTimeout(t);throw e;});
+  }
+  // Try each copy of the map service in turn.
+  function ask(q,ms,h){
+    h=h||0;
+    return post(HOSTS[h],q,ms).catch(function(e){
+      if(h+1<HOSTS.length){cnote("That map server did not answer. Trying another one.");return ask(q,ms,h+1);}
+      throw e;
+    });
+  }
+  function pairQ(c){
+    var parts=c.n.split("&");
+    if(parts.length!==2) return null;
+    return 'way[highway][name~"'+roadRe(parts[0])+'",i]'+BOX+'->.a;way[highway][name~"'+roadRe(parts[1])+'",i]'+BOX+'->.b;node(w.a)(w.b);out;';
+  }
+  // dual carriageways meet at several points: keep the cluster nearest the current pin
+  function pick(c,n){
+    if(!n.length) return null;
+    var near=n[0],best=Infinity;
+    n.forEach(function(e){var d=dist(c.lat,c.lon,e.lat,e.lon);if(d<best){best=d;near=e;}});
+    var g=n.filter(function(e){return dist(near.lat,near.lon,e.lat,e.lon)<150;}),la=0,lo=0;
+    g.forEach(function(e){la+=e.lat;lo+=e.lon;});
+    return {lat:la/g.length,lon:lo/g.length};
+  }
+  // All junctions in one request; a marker after each one keeps the answers apart.
+  function lookupAll(list){
+    var q='[out:json][timeout:60];'+list.map(function(c,k){return pairQ(c)+'make sep k='+k+';out;';}).join("");
+    return ask(q,75000).then(function(j){
+      var groups=[[]];
+      ((j&&j.elements)||[]).forEach(function(e){
+        if(e.type==="node"&&typeof e.lat==="number") groups[groups.length-1].push(e);
+        else groups.push([]);
+      });
+      if(groups.length<list.length+1) throw new Error("short");
+      return list.map(function(c,k){return pick(c,groups[k]);});
+    });
+  }
+  // Slower fallback: one junction per request.
+  function lookupEach(list){
+    var out=[],k=0;
+    function next(){
+      if(k>=list.length) return Promise.resolve(out);
+      var c=list[k];k++;
+      cnote("Looking up "+c.n+" ("+k+" of "+list.length+")");
+      return ask('[out:json][timeout:25];'+pairQ(c),30000).then(function(j){
+        out.push(pick(c,((j&&j.elements)||[]).filter(function(e){return e.type==="node";})));
+      },function(){out.push(undefined);}).then(function(){return wait(1500);}).then(next);
+    }
+    return next();
+  }
+  var fixing=false;
+  $("fixBtn").addEventListener("click",function(){
+    if(fixing) return;
+    var todo=cams.filter(function(c){return !(c.osm&&c.fixed)&&pairQ(c);});
+    if(!todo.length){cnote("Every position already comes from map data.");return;}
+    fixing=true;
+    cnote("Asking the map service about "+todo.length+" junctions. This takes up to a minute.");
+    lookupAll(todo).catch(function(){
+      cnote("The quick lookup failed. Looking the junctions up one at a time.");
+      return lookupEach(todo);
+    }).then(function(res){
+      var moved=[],missed=[],failed=[];
+      todo.forEach(function(c,k){
+        var p=res[k];
+        if(p===undefined){failed.push(c.n);return;}
+        if(!p){missed.push(c.n);return;}
+        var d=dist(c.lat,c.lon,p.lat,p.lon);
+        if(d>30) moved.push(c.n+" by "+fmt(d));
+        c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;
+      });
+      fixing=false;save();render();
+      var have=cams.filter(function(c){return c.osm&&c.fixed;}).length;
+      cnote(have+" of "+cams.length+" positions now come from map data."+(moved.length?" Moved this time: "+moved.join("; ")+".":"")+(missed.length?" Not found on the map: "+missed.join("; ")+".":"")+(failed.length?" No answer for: "+failed.join("; ")+". Tap the button again in a few minutes to finish these.":""));
+    }).catch(function(){
+      fixing=false;
+      cnote("The map service is not answering right now. Nothing was changed. Try again in a few minutes.");
+    });
+  });
+  window.__rw={onFix:onFix};
+  render();updateIdle();
+})();
+</script>
+</body>
+</html>
