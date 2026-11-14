@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RoboWatch</title>
+<meta name="theme-color" content="#060a11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RoboWatch">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <style>
 /* Direction: a drive HUD in dark or light; one instrument accent; Oxanium throughout;
@@ -709,6 +715,7 @@ footer{font-size:13px;color:var(--muted)}
     }
     if(watchId!==null||demoTimer){stopAll();note("");return;}
     prime();note("");
+    say("RoboWatch is watching.");   // also unlocks speech on iPhones, which need a tap first
     var blocked="Live GPS is blocked in this preview. It will work once the page is published at its own https address. Use the demo drive for now.";
     if(!navigator.geolocation){note(blocked);return;}
     setStatus("watch","Watching","Finding you","Waiting for a GPS fix.","Live GPS");
@@ -726,7 +733,7 @@ footer{font-size:13px;color:var(--muted)}
   $("demoBtn").addEventListener("click",function(){
     if(demoTimer||watchId!==null||nativeDriving){stopAll();note("");return;}
     if(!cams.length){note("Add a camera robot first.");return;}
-    prime();note("This is a simulated drive toward "+cams[0].n+". No GPS is used.");
+    prime();say("Demo drive.");note("This is a simulated drive toward "+cams[0].n+". No GPS is used.");
     var c=cams[0],start=1300,step=45,m=start;
     $("demoBtn").textContent="Stop demo";setDriving(true);
     function tick(){
