@@ -25,6 +25,7 @@ import java.util.ArrayList;
 /** Shows the RoboWatch page and connects it to the background drive service. */
 public class MainActivity extends Activity implements DriveService.Listener {
     private static final int REQ_LOCATION = 7;
+    private static final int REQ_NOTIFY = 8;
 
     private WebView web;
     private Speaker speaker;
@@ -107,6 +108,33 @@ public class MainActivity extends Activity implements DriveService.Listener {
         } else {
             tellPageStopped("RoboWatch needs precise location to warn you. Allow it, then tap Start drive again.");
         }
+    }
+
+    /** Plays one alert after a short wait, so the phone can be locked to check a smartwatch. */
+    private void beginTestAlert() {
+        final boolean wantsBuzz = prefs.getBoolean("watch", true);
+        if (wantsBuzz && Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY);
+            tellTest("RoboWatch needs permission to send notifications before it can vibrate your watch. Allow it, then tap Test alert again.");
+            return;
+        }
+        if (web == null) return;
+        web.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (prefs.getBoolean("sound", true)) speaker.beep(2);
+                if (prefs.getBoolean("voice", true)) speaker.say("This is a RoboWatch test alert.");
+                if (wantsBuzz) Alerts.buzz(MainActivity.this, "RoboWatch test alert", "If your watch buzzed, it is set up.");
+                tellTest(wantsBuzz
+                        ? "Test alert sent. Your phone should have vibrated, and your watch should have buzzed if it shows RoboWatch notifications."
+                        : "Test alert played. Tick Vibrate my phone and smartwatch to test the watch as well.");
+            }
+        }, 6000L);
+    }
+
+    private void tellTest(String message) {
+        js("window.__rw&&window.__rw.testResult(" + JSONObject.quote(message) + ")");
     }
 
     private void js(final String code) {
@@ -195,6 +223,16 @@ public class MainActivity extends Activity implements DriveService.Listener {
         @JavascriptInterface
         public void beep() {
             speaker.beep(2);
+        }
+
+        @JavascriptInterface
+        public void testAlert() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    beginTestAlert();
+                }
+            });
         }
 
         @JavascriptInterface

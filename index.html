@@ -261,6 +261,10 @@ footer{font-size:13px;color:var(--muted)}
       <label class="inline" for="sound"><input type="checkbox" id="sound" checked> Sound alerts (beeps)</label>
       <p class="sub">Beeps count down to each camera robot: one at the first warning, two at 250 m and three at about 25 m.</p>
       <label class="inline" for="watch" id="watchRow" hidden><input type="checkbox" id="watch" checked> Vibrate my phone and smartwatch</label>
+      <div class="row">
+        <button class="small" id="testBtn" type="button">Test alert</button>
+      </div>
+      <p id="testNote" class="note" role="status"></p>
       <p class="sub" id="appHint">Mount the phone and turn the volume up, so you never need to look at or touch the screen while driving.</p>
     </div>
   </section>
@@ -1041,9 +1045,24 @@ footer{font-size:13px;color:var(--muted)}
   });
   window.__rw={onFix:onFix,
     nativeFix:function(lat,lon,sp){if(nativeDriving) onFix(lat,lon,(typeof sp==="number"&&sp>=0)?sp:null,false);},
+    testResult:function(msg){$("testNote").textContent=msg||"";},
     nativeStopped:function(msg){if(nativeDriving){nativeDriving=false;stopAll();} if(msg) note(msg);}};
   ["radius","limit","voice","sound","watch"].forEach(function(id){$(id).addEventListener("change",function(){savePrefs();drawView();});});
   $("theme").addEventListener("change",function(){savePrefs();applyTheme();});
+  // Test alert: plays the alert without driving. In the app it waits a few seconds first,
+  // so the phone can be locked to check that a smartwatch buzzes.
+  $("testBtn").addEventListener("click",function(){
+    if(NATIVE&&window.Android.testAlert){
+      syncNative();
+      $("testNote").textContent="Test alert in 6 seconds. Lock your phone now if you want to check your watch.";
+      try{window.Android.testAlert();}catch(e){$("testNote").textContent="The test alert could not be sent.";}
+      return;
+    }
+    prime();beep(2);
+    try{if(navigator.vibrate) navigator.vibrate([200,100,200]);}catch(e){}
+    say("This is a RoboWatch test alert.");
+    $("testNote").textContent="Test alert played. If you heard nothing, turn the volume up and check that voice or sound alerts are ticked.";
+  });
   $("viewRadar").addEventListener("click",function(){setView("radar");});
   $("viewMap").addEventListener("click",function(){setView("map");});
   render();updateIdle();applyTheme();setView(prefs.view);
