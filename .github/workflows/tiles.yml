@@ -1,0 +1,30 @@
+name: Test map tile providers
+
+on:
+  push:
+    branches: [android-app]
+    paths:
+      - 'tools/tiles/**'
+      - '.github/workflows/tiles.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch one tile from each provider
+        run: bash tools/tiles/test.sh
+      - name: Save the results
+        if: always()
+        run: |
+          cd out
+          git init -q -b tile-test
+          git config user.name "robowatch-build"
+          git config user.email "robowatch-build@users.noreply.github.com"
+          git add .
+          git commit -qm "Tile provider test"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" tile-test

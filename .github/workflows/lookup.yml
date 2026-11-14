@@ -1,0 +1,32 @@
+name: Look up camera junction positions
+
+on:
+  push:
+    branches: [android-app]
+    paths:
+      - 'tools/lookup/**'
+      - '.github/workflows/lookup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ask OpenStreetMap where each junction is
+        run: python3 tools/lookup/lookup.py 2>&1 | tee lookup.log
+      - name: Save the results
+        if: always()
+        run: |
+          mkdir -p /tmp/out
+          cp lookup.json lookup.log /tmp/out/ 2>/dev/null || true
+          cd /tmp/out
+          git init -q -b lookup-results
+          git config user.name "robowatch-build"
+          git config user.email "robowatch-build@users.noreply.github.com"
+          git add .
+          git commit -qm "Junction lookup results"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" lookup-results
