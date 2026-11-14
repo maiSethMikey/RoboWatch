@@ -174,6 +174,15 @@ public class MainActivity extends Activity implements DriveService.Listener {
         }
 
         @JavascriptInterface
+        public String appVersion() {
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        @JavascriptInterface
         public boolean isDriving() {
             return DriveService.running;
         }
