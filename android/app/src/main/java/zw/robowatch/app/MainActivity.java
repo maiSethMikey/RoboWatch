@@ -42,6 +42,8 @@ public class MainActivity extends Activity implements DriveService.Listener {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
+        // OpenStreetMap asks apps that use its map images to say who they are.
+        settings.setUserAgentString(settings.getUserAgentString() + " RoboWatch/0.1 (+https://github.com/maiSethMikey/RoboWatch)");
 
         web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebViewClient(new WebViewClient() {

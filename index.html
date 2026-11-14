@@ -102,6 +102,7 @@ body.driving .sweep{opacity:1}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 #street{width:100%;max-width:340px;aspect-ratio:1;margin:0 auto;border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;z-index:0}
 .leaflet-container{background:var(--panel-2);font:inherit}
+#street.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.95) saturate(.55)}
 .leaflet-container .leaflet-control-attribution{font-size:10px;background:var(--panel);color:var(--muted)}
 .leaflet-container .leaflet-control-attribution a{color:var(--muted)}
 
@@ -485,20 +486,36 @@ footer{font-size:13px;color:var(--muted)}
     try{var r=document.documentElement;
       if(prefs.theme==="auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme",prefs.theme);}catch(e){}
     readPal();
-    if(tiles){try{tiles.setUrl(tileUrl());}catch(e){}}
+    tintMap();
     drawView();
   }
 
   // Street map (Leaflet). North is always at the top; the map follows you during a drive.
   var map=null,tiles=null,mapYou=null,mapCams=[];
-  function tileUrl(){return "https://{s}.basemaps.cartocdn.com/"+(isDark()?"dark_all":"light_all")+"/{z}/{x}/{y}{r}.png";}
+  // Street images come from OpenStreetMap; if they fail to load, Esri's street map is tried instead.
+  // (CARTO's basemaps now need a paid key.) Dark mode recolours the same images with a CSS filter.
+  var TILES=[
+    {url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",credit:"&copy; OpenStreetMap contributors"},
+    {url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",credit:"Tiles &copy; Esri"}
+  ],tileSrc=0,tileOk=0,tileBad=0;
+  function addTiles(){
+    if(tiles){try{tiles.remove();}catch(e){}}
+    tileOk=0;tileBad=0;
+    tiles=window.L.tileLayer(TILES[tileSrc].url,{maxZoom:19,attribution:TILES[tileSrc].credit}).addTo(map);
+    tiles.on("tileload",function(){tileOk++;});
+    tiles.on("tileerror",function(){
+      tileBad++;
+      if(tileOk===0&&tileBad>=4&&tileSrc+1<TILES.length){tileSrc++;addTiles();}
+    });
+  }
+  function tintMap(){try{$("street").classList.toggle("dark-tiles",isDark());}catch(e){}}
   function initMap(){
     if(map) return true;
     if(!window.L) return false;
     try{
       map=window.L.map("street",{zoomControl:false});
       map.attributionControl.setPrefix("Leaflet");
-      tiles=window.L.tileLayer(tileUrl(),{maxZoom:19,subdomains:"abcd",attribution:"&copy; OpenStreetMap contributors &copy; CARTO"}).addTo(map);
+      addTiles();tintMap();
       if(lastPos) map.setView([lastPos.lat,lastPos.lon],15);
       else if(cams.length) map.fitBounds(cams.map(function(c){return [c.lat,c.lon];}),{padding:[20,20]});
       else map.setView([-17.8292,31.0522],13);
