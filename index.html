@@ -79,7 +79,7 @@ button.primary{background:var(--accent);color:var(--accent-ink);border-color:var
 button.small{min-height:40px;padding:8px 12px;font-size:14px}
 button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-select,input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%}
+select,input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%}
 .inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:15px}
 .inline input{width:22px;height:22px}
 .note{font-size:14px;border-left:4px solid var(--warn);background:var(--warn-bg);padding:10px 12px;border-radius:6px}
@@ -149,8 +149,17 @@ footer{font-size:13px;color:var(--muted)}
         <label class="inline" for="voice" style="align-self:end;min-height:44px">
           <input type="checkbox" id="voice" checked> Speak the alert
         </label>
+        <label for="limit">Tell me to slow down near cameras above
+          <select id="limit">
+            <option value="0">Off</option>
+            <option value="40">40 km/h</option>
+            <option value="50">50 km/h</option>
+            <option value="60" selected>60 km/h</option>
+            <option value="80">80 km/h</option>
+          </select>
+        </label>
       </div>
-      <p class="sub">Mount the phone and turn the volume up. Alerts are spoken so you never need to look at or touch the screen while driving.</p>
+      <p class="sub" id="appHint">Mount the phone and turn the volume up. Alerts are spoken so you never need to look at or touch the screen while driving.</p>
     </div>
   </section>
 
@@ -207,6 +216,18 @@ footer{font-size:13px;color:var(--muted)}
         <button class="small" id="resetBtn" type="button">Restore the original list</button>
       </div>
       <p class="sub">To get coordinates, press and hold the spot in Google Maps and copy the two numbers it shows.</p>
+    </div>
+    <div class="card">
+      <h3>Share or move your camera list</h3>
+      <p class="sub">Copy your list to send to another driver or to another copy of RoboWatch. To load a list, paste it into the box and tap Load.</p>
+      <label for="listBox">Camera list
+        <textarea id="listBox" rows="5" spellcheck="false" placeholder="One camera per line: name;latitude;longitude"></textarea>
+      </label>
+      <div class="row">
+        <button class="small" id="copyBtn" type="button">Copy my camera list</button>
+        <button class="small" id="loadBtn" type="button">Load the list in the box</button>
+      </div>
+      <p id="listNote" class="note" role="status"></p>
     </div>
   </section>
 
@@ -273,13 +294,22 @@ footer{font-size:13px;color:var(--muted)}
   var $=function(id){return document.getElementById(id);};
   var cams=load();
   var watchId=null, demoTimer=null, wake=null, audio=null, lastPos=null;
+  // Inside the Android app, a native service does the GPS and the speaking so alerts work with the screen off.
+  var NATIVE=!!(window.Android&&window.Android.startDrive), nativeDriving=false;
+  function syncNative(){
+    if(!NATIVE) return;
+    try{
+      window.Android.setCameras(JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon};})));
+      window.Android.setSettings(radius(),speedLimit(),!!$("voice").checked);
+    }catch(e){}
+  }
 
   function clone(a){return JSON.parse(JSON.stringify(a));}
   function load(){
     try{var s=localStorage.getItem(KEY); if(s){var a=JSON.parse(s); if(Array.isArray(a)&&a.length) return a;}}catch(e){}
     return clone(DEFAULTS);
   }
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed,osm:!!c.osm};})));}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon,src:c.src,fixed:!!c.fixed,osm:!!c.osm};})));}catch(e){} syncNative();}
 
   function dist(aLat,aLon,bLat,bLon){
     var R=6371000,r=Math.PI/180;
@@ -300,6 +330,8 @@ footer{font-size:13px;color:var(--muted)}
   function note(t){$("note").textContent=t||"";}
 
   function beep(){
+    if(nativeDriving) return;
+    if(NATIVE){try{window.Android.beep();}catch(e){} return;}
     try{
       if(!audio) return;
       [0,0.28].forEach(function(t){
@@ -312,36 +344,78 @@ footer{font-size:13px;color:var(--muted)}
     }catch(e){}
   }
   function say(text){
-    if(!$("voice").checked) return;
+    if(!$("voice").checked||nativeDriving) return;
+    if(NATIVE){try{window.Android.say(text);}catch(e){} return;}
     try{
       if(!("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     }catch(e){}
   }
   function fire(cam){
+    if(nativeDriving) return;
     beep();
     try{if(navigator.vibrate) navigator.vibrate([200,100,200]);}catch(e){}
     say("Camera robot ahead. "+cam.n.replace(/&/g,"and")+". Phone down, belts on, stop behind the line.");
   }
 
+  function remind(c){
+    if(nativeDriving) return;
+    if(NATIVE){try{window.Android.beep();}catch(e){}}
+    else try{if(audio){var o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);
+      g.gain.setValueAtTime(0.25,audio.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.2);o.start();o.stop(audio.currentTime+0.22);}}catch(e){}
+    say("Camera robot in 150 metres.");
+  }
+  function slow(lim){say("Slow down. You are over "+lim+".");}
+  function speedLimit(){var el=$("limit");return el?(parseInt(el.value,10)||0):0;}
+
   // Core: called with every position fix, real or demo.
+  var anchor=null,heading=null;
+  function bearing(aLat,aLon,bLat,bLon){
+    var r=Math.PI/180,y=Math.sin((bLon-aLon)*r)*Math.cos(bLat*r);
+    var x=Math.cos(aLat*r)*Math.sin(bLat*r)-Math.sin(aLat*r)*Math.cos(bLat*r)*Math.cos((bLon-aLon)*r);
+    return (Math.atan2(y,x)/r+360)%360;
+  }
   function onFix(lat,lon,speedMs,isDemo){
     lastPos={lat:lat,lon:lon};
-    var r=radius(),best=null,bestD=Infinity;
+    // direction of travel, refreshed every 20 m moved
+    if(!anchor) anchor={lat:lat,lon:lon};
+    else if(dist(anchor.lat,anchor.lon,lat,lon)>=20){heading=bearing(anchor.lat,anchor.lon,lat,lon);anchor={lat:lat,lon:lon};}
+    var r=radius(),best=null,bestD=Infinity,ahead=null,aheadD=Infinity;
+    var kmhNum=(typeof speedMs==="number"&&speedMs>=0)?Math.round(speedMs*3.6):null,lim=speedLimit(),over=false;
     cams.forEach(function(c){
       var d=dist(lat,lon,c.lat,c.lon);
       c._d=d;
+      // is this camera in front of us? (unknown direction counts as yes)
+      var isAhead=heading===null||Math.abs(((bearing(lat,lon,c.lat,c.lon)-heading+540)%360)-180)<=90;
+      if(c._passed){
+        if(d>c._max) c._max=d;
+        // forget "passed" once it is far behind, or if we turn round and head back to it
+        if(d>2000||d<c._max-150){c._passed=false;c._in=false;}
+      }
+      if(!c._passed){
+        // alert only for cameras in our direction of travel
+        var inCone=heading===null||Math.abs(((bearing(lat,lon,c.lat,c.lon)-heading+540)%360)-180)<=60;
+        if(d<=r&&!c._in&&inCone){c._in=true;c._min=d;c._r2=d<=200;c._spd=false;fire(c);}
+        if(c._in){
+          if(d<c._min) c._min=d;
+          // 100 m beyond the closest point: this one is done, look for the next
+          if(d>=c._min+100){c._passed=true;c._in=false;c._max=d;}
+          else{
+            if(!c._r2&&d<=150){c._r2=true;remind(c);}
+            if(lim&&kmhNum!==null&&kmhNum>lim){over=true;if(!c._spd){c._spd=true;slow(lim);}}
+          }
+        }
+      }
+      if(c._passed) return;
       if(d<bestD){bestD=d;best=c;}
-      if(d<=r && !c._in){c._in=true;fire(c);}
-      else if(d>r+150){c._in=false;}
+      if((c._in||isAhead)&&d<aheadD){aheadD=d;ahead=c;}
     });
-    var kmh=(typeof speedMs==="number"&&speedMs>=0)?Math.round(speedMs*3.6)+" km/h":"";
-    var tail=(isDemo?"Demo drive":"Live GPS")+(kmh?" · "+kmh:"");
-    if(!best){setStatus("watch","Watching","Clear","No camera robots in your list.",tail);}
-    else if(bestD<=r){setStatus("alert","Camera robot ahead",fmt(bestD),best.n,tail);}
-    else if(bestD<=r*2.5){setStatus("near","Coming up",fmt(bestD),best.n,tail);}
-    else{setStatus("watch","Watching","Clear","Nearest: "+best.n+", "+fmt(bestD),tail);}
+    var tail=(isDemo?"Demo drive":"Live GPS")+(kmhNum!==null?" · "+kmhNum+" km/h":"");
+    if(ahead&&ahead._in){setStatus("alert",over?"Slow down · camera robot ahead":"Camera robot ahead",fmt(aheadD),ahead.n,tail);}
+    else if(ahead&&aheadD<=r*2.5){setStatus("near","Coming up",fmt(aheadD),ahead.n,tail);}
+    else if(ahead){setStatus("watch","Watching","Clear","Next: "+ahead.n+", "+fmt(aheadD),tail);}
+    else if(best){setStatus("watch","Watching","Clear","None ahead. Nearest: "+best.n+", "+fmt(bestD),tail);}
+    else{setStatus("watch","Watching","Clear","No more camera robots nearby on your list.",tail);}
     renderDistances();
   }
 
@@ -349,7 +423,8 @@ footer{font-size:13px;color:var(--muted)}
     if(watchId!==null){try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null;}
     if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
     if(wake){try{wake.release();}catch(e){} wake=null;}
-    cams.forEach(function(c){c._in=false;});
+    if(nativeDriving){nativeDriving=false;try{window.Android.stopDrive();}catch(e){}}
+    cams.forEach(function(c){c._in=false;c._passed=false;});anchor=null;heading=null;
     $("startBtn").textContent="Start drive";
     $("demoBtn").textContent="Run a demo drive";
     setStatus("idle","Not driving","Ready","Start before you move off, then leave the phone alone.",cams.length+" camera robots loaded");
@@ -360,6 +435,15 @@ footer{font-size:13px;color:var(--muted)}
   }
 
   $("startBtn").addEventListener("click",function(){
+    if(NATIVE){
+      if(nativeDriving||demoTimer){stopAll();note("");return;}
+      note("");syncNative();
+      nativeDriving=true;
+      $("startBtn").textContent="Stop";
+      setStatus("watch","Watching","Finding you","Waiting for a GPS fix. Alerts keep working with the screen off.","Live GPS");
+      try{window.Android.startDrive();}catch(e){stopAll();note("The drive could not be started.");}
+      return;
+    }
     if(watchId!==null||demoTimer){stopAll();note("");return;}
     prime();note("");
     var blocked="Live GPS is blocked in this preview. It will work once the page is published at its own https address. Use the demo drive for now.";
@@ -377,7 +461,7 @@ footer{font-size:13px;color:var(--muted)}
   });
 
   $("demoBtn").addEventListener("click",function(){
-    if(demoTimer||watchId!==null){stopAll();note("");return;}
+    if(demoTimer||watchId!==null||nativeDriving){stopAll();note("");return;}
     if(!cams.length){note("Add a camera robot first.");return;}
     prime();note("This is a simulated drive toward "+cams[0].n+". No GPS is used.");
     var c=cams[0],start=1300,step=45,m=start;
@@ -439,6 +523,26 @@ footer{font-size:13px;color:var(--muted)}
     if(!n||isNaN(la)||isNaN(lo)||la<-90||la>90||lo<-180||lo>180){note("Enter a name plus a valid latitude and longitude, for example -17.8300 and 31.0500.");return;}
     cams.push({n:n,lat:la,lon:lo,src:"user",fixed:true});save();render();updateIdle();
     $("newName").value="";$("newLat").value="";$("newLon").value="";note("Added "+n+".");
+  });
+  $("copyBtn").addEventListener("click",function(){
+    var text=cams.map(function(c){return [c.n.replace(/;/g,","),c.lat,c.lon,c.src||"user",(c.osm&&c.fixed)?"map":(c.fixed?"ok":"est")].join(";");}).join("\n");
+    $("listBox").value=text;
+    var done=function(ok){$("listNote").textContent=ok?"Copied. Paste it into a message or into another RoboWatch.":"Your list is in the box. Press and hold the box, choose Select all, then Copy.";};
+    try{navigator.clipboard.writeText(text).then(function(){done(true);},function(){done(false);});}catch(e){done(false);}
+  });
+  $("loadBtn").addEventListener("click",function(){
+    var out=[];
+    $("listBox").value.split(/\r?\n/).forEach(function(line){
+      var p=line.split(";");
+      if(p.length<3) return;
+      var la=parseFloat(p[1]),lo=parseFloat(p[2]),n=p[0].trim();
+      if(!n||isNaN(la)||isNaN(lo)||la<-90||la>90||lo<-180||lo>180) return;
+      var src=(p[3]||"").trim(),st=(p[4]||"").trim();
+      out.push({n:n,lat:la,lon:lo,src:(src==="official"||src==="reported")?src:"user",fixed:st!=="est",osm:st==="map"});
+    });
+    if(!out.length){$("listNote").textContent="No cameras found in the box. Each line needs a name, a latitude and a longitude separated by semicolons.";return;}
+    cams=out;save();render();updateIdle();
+    $("listNote").textContent="Loaded "+out.length+" camera robots.";
   });
   $("resetBtn").addEventListener("click",function(){
     cams=clone(DEFAULTS);save();render();updateIdle();note("Original list restored.");
@@ -570,59 +674,104 @@ footer{font-size:13px;color:var(--muted)}
   }
   function cnote(t){$("camNote").textContent=t||"";}
   function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  function overpass(q,again){
-    return fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q)})
+  var HOSTS=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+  // One request with a hard time limit, so a silent server can never leave the app waiting.
+  function post(url,q,ms){
+    var ctl=("AbortController" in window)?new AbortController():null;
+    var t=setTimeout(function(){if(ctl) ctl.abort();},ms);
+    return fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"data="+encodeURIComponent(q),signal:ctl?ctl.signal:undefined})
       .then(function(r){
-        if((r.status===429||r.status===504)&&!again) return wait(6000).then(function(){return overpass(q,true);});
-        if(!r.ok) throw new Error("map "+r.status);
+        if(!r.ok){var e=new Error("http");e.status=r.status;throw e;}
         return r.json();
-      });
+      })
+      .then(function(j){clearTimeout(t);return j;},function(e){clearTimeout(t);throw e;});
   }
-  function locate(c){
-    var parts=c.n.split("&");
-    if(parts.length!==2) return Promise.resolve(null);
-    var k='[~"^(name|old_name|alt_name)$"~"';
-    var q='[out:json][timeout:25];way[highway]'+k+roadRe(parts[0])+'",i]'+BOX+'->.a;way[highway]'+k+roadRe(parts[1])+'",i]'+BOX+'->.b;node(w.a)(w.b);out;';
-    return overpass(q,false).then(function(j){
-      var n=((j&&j.elements)||[]).filter(function(e){return e.type==="node";});
-      if(!n.length) return null;
-      // dual carriageways meet at several points: keep the cluster nearest the current pin
-      var near=n[0],best=Infinity;
-      n.forEach(function(e){var d=dist(c.lat,c.lon,e.lat,e.lon);if(d<best){best=d;near=e;}});
-      var g=n.filter(function(e){return dist(near.lat,near.lon,e.lat,e.lon)<150;}),la=0,lo=0;
-      g.forEach(function(e){la+=e.lat;lo+=e.lon;});
-      return {lat:la/g.length,lon:lo/g.length};
+  // Try each copy of the map service in turn.
+  function ask(q,ms,h){
+    h=h||0;
+    return post(HOSTS[h],q,ms).catch(function(e){
+      if(h+1<HOSTS.length){cnote("That map server did not answer. Trying another one.");return ask(q,ms,h+1);}
+      throw e;
     });
+  }
+  function pairQ(c){
+    var parts=c.n.split("&");
+    if(parts.length!==2) return null;
+    return 'way[highway][name~"'+roadRe(parts[0])+'",i]'+BOX+'->.a;way[highway][name~"'+roadRe(parts[1])+'",i]'+BOX+'->.b;node(w.a)(w.b);out;';
+  }
+  // dual carriageways meet at several points: keep the cluster nearest the current pin
+  function pick(c,n){
+    if(!n.length) return null;
+    var near=n[0],best=Infinity;
+    n.forEach(function(e){var d=dist(c.lat,c.lon,e.lat,e.lon);if(d<best){best=d;near=e;}});
+    var g=n.filter(function(e){return dist(near.lat,near.lon,e.lat,e.lon)<150;}),la=0,lo=0;
+    g.forEach(function(e){la+=e.lat;lo+=e.lon;});
+    return {lat:la/g.length,lon:lo/g.length};
+  }
+  // All junctions in one request; a marker after each one keeps the answers apart.
+  function lookupAll(list){
+    var q='[out:json][timeout:60];'+list.map(function(c,k){return pairQ(c)+'make sep k='+k+';out;';}).join("");
+    return ask(q,75000).then(function(j){
+      var groups=[[]];
+      ((j&&j.elements)||[]).forEach(function(e){
+        if(e.type==="node"&&typeof e.lat==="number") groups[groups.length-1].push(e);
+        else groups.push([]);
+      });
+      if(groups.length<list.length+1) throw new Error("short");
+      return list.map(function(c,k){return pick(c,groups[k]);});
+    });
+  }
+  // Slower fallback: one junction per request.
+  function lookupEach(list){
+    var out=[],k=0;
+    function next(){
+      if(k>=list.length) return Promise.resolve(out);
+      var c=list[k];k++;
+      cnote("Looking up "+c.n+" ("+k+" of "+list.length+")");
+      return ask('[out:json][timeout:25];'+pairQ(c),30000).then(function(j){
+        out.push(pick(c,((j&&j.elements)||[]).filter(function(e){return e.type==="node";})));
+      },function(){out.push(undefined);}).then(function(){return wait(1500);}).then(next);
+    }
+    return next();
   }
   var fixing=false;
   $("fixBtn").addEventListener("click",function(){
     if(fixing) return;
+    var todo=cams.filter(function(c){return !(c.osm&&c.fixed)&&pairQ(c);});
+    if(!todo.length){cnote("Every position already comes from map data.");return;}
     fixing=true;
-    var i=0,done=0,missed=[],moved=[];
-    function next(){
-      if(i>=cams.length){
-        fixing=false;save();render();
-        cnote("Updated "+done+" of "+cams.length+" from map data."+(moved.length?" Moved: "+moved.join("; ")+".":"")+(missed.length?" Not found, still estimated: "+missed.join("; ")+".":""));
-        return;
-      }
-      var c=cams[i];i++;
-      cnote("Looking up "+i+" of "+cams.length+": "+c.n);
-      locate(c).then(function(p){
-        if(p){
-          var d=dist(c.lat,c.lon,p.lat,p.lon);
-          if(d>30) moved.push(c.n+" by "+fmt(d));
-          c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;done++;
-        }else{missed.push(c.n);}
-        return wait(1200);
-      }).then(next,function(){
-        fixing=false;save();render();
-        cnote("The map data service could not be reached after "+done+" of "+cams.length+". Wait a minute and tap the button again.");
+    cnote("Asking the map service about "+todo.length+" junctions. This takes up to a minute.");
+    lookupAll(todo).catch(function(){
+      cnote("The quick lookup failed. Looking the junctions up one at a time.");
+      return lookupEach(todo);
+    }).then(function(res){
+      var moved=[],missed=[],failed=[];
+      todo.forEach(function(c,k){
+        var p=res[k];
+        if(p===undefined){failed.push(c.n);return;}
+        if(!p){missed.push(c.n);return;}
+        var d=dist(c.lat,c.lon,p.lat,p.lon);
+        if(d>30) moved.push(c.n+" by "+fmt(d));
+        c.lat=+p.lat.toFixed(6);c.lon=+p.lon.toFixed(6);c.fixed=true;c.osm=true;
       });
-    }
-    next();
+      fixing=false;save();render();
+      var have=cams.filter(function(c){return c.osm&&c.fixed;}).length;
+      cnote(have+" of "+cams.length+" positions now come from map data."+(moved.length?" Moved this time: "+moved.join("; ")+".":"")+(missed.length?" Not found on the map: "+missed.join("; ")+".":"")+(failed.length?" No answer for: "+failed.join("; ")+". Tap the button again in a few minutes to finish these.":""));
+    }).catch(function(){
+      fixing=false;
+      cnote("The map service is not answering right now. Nothing was changed. Try again in a few minutes.");
+    });
   });
-
+  window.__rw={onFix:onFix,
+    nativeFix:function(lat,lon,sp){if(nativeDriving) onFix(lat,lon,(typeof sp==="number"&&sp>=0)?sp:null,false);},
+    nativeStopped:function(msg){if(nativeDriving){nativeDriving=false;stopAll();} if(msg) note(msg);}};
+  ["radius","limit","voice"].forEach(function(id){$(id).addEventListener("change",syncNative);});
   render();updateIdle();
+  if(NATIVE){
+    syncNative();
+    $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive.";
+    try{if(window.Android.isDriving()){nativeDriving=true;$("startBtn").textContent="Stop";setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
+  }
 })();
 </script>
 </body>

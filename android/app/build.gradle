@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Each GitHub build gets a higher version number so the phone accepts it as an update.
+def buildNo = (System.getenv("GITHUB_RUN_NUMBER") ?: "1") as Integer
+
+android {
+    namespace 'zw.robowatch.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'zw.robowatch.app'
+        minSdk 26
+        targetSdk 34
+        versionCode buildNo
+        versionName "0.1.${buildNo}"
+    }
+
+    // One fixed signing key, kept in the repository, so every build can update the last one.
+    signingConfigs {
+        shared {
+            storeFile file('../signing/robowatch.p12')
+            storeType 'pkcs12'
+            storePassword 'robowatch'
+            keyAlias 'robowatch'
+            keyPassword 'robowatch'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.shared
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}

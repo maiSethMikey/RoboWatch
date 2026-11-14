@@ -1,0 +1,66 @@
+name: Build Android app
+
+on:
+  push:
+    branches: [main, android-app]
+    paths:
+      - 'android/**'
+      - 'index.html'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      # The app shows the same page as the website, bundled inside it so it works offline.
+      - name: Bundle the web page into the app
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp index.html android/app/src/main/assets/index.html
+
+      - name: Build
+        working-directory: android
+        run: |
+          set -o pipefail
+          gradle --no-daemon --console=plain assembleDebug 2>&1 | tee ../build.log
+
+      # Keep the log on its own branch so build problems can be read without signing in.
+      - name: Save the build log
+        if: always()
+        run: |
+          mkdir -p /tmp/logs
+          cp build.log /tmp/logs/build.log 2>/dev/null || echo "no log was produced" > /tmp/logs/build.log
+          echo "run ${{ github.run_number }} status ${{ job.status }} commit ${{ github.sha }}" > /tmp/logs/status.txt
+          cd /tmp/logs
+          git init -q -b build-logs
+          git config user.name "robowatch-build"
+          git config user.email "robowatch-build@users.noreply.github.com"
+          git add .
+          git commit -qm "Build log for run ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" build-logs
+
+      - name: Publish the app file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk RoboWatch.apk
+          gh release create "build-${{ github.run_number }}" RoboWatch.apk \
+            --target "${{ github.sha }}" \
+            --title "RoboWatch app, build ${{ github.run_number }}" \
+            --notes "Download RoboWatch.apk on your Android phone and open it to install." \
+            --latest
