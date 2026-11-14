@@ -5,124 +5,157 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RoboWatch</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=Exo+2:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Layout idea: one scrolling phone column. A big road-sign style status panel on top,
-   then the camera list, then the rules. */
+/* Direction: a night-drive HUD. One dark theme by choice; a cyan instrument accent;
+   layout is one phone column with the drive instruments first, reference material below. */
 :root{
-  --road:#f1f2f0;      /* page */
-  --panel:#ffffff;     /* cards */
-  --ink:#1c2226;       /* text */
-  --muted:#5c676e;     /* secondary text */
-  --line:#d5d9d6;      /* borders */
-  --accent:#0b5c8a;    /* controls, links */
-  --accent-ink:#ffffff;
-  --go:#1d7a46; --go-bg:#e3f3e9;
-  --warn:#8a5a00; --warn-bg:#fdf0cf;
-  --stop:#b3261e; --stop-bg:#fde5e2;
-  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
-  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    color-scheme:dark;
-    --road:#14181b; --panel:#1e2428; --ink:#eef1ef; --muted:#a3adb2; --line:#343c41;
-    --accent:#6cbcec; --accent-ink:#0c1a22;
-    --go:#6fd49a; --go-bg:#173324;
-    --warn:#f2c35a; --warn-bg:#3a2e0e;
-    --stop:#ff8f86; --stop-bg:#45191a;
-  }
-}
-:root[data-theme="dark"]{
   color-scheme:dark;
-  --road:#14181b; --panel:#1e2428; --ink:#eef1ef; --muted:#a3adb2; --line:#343c41;
-  --accent:#6cbcec; --accent-ink:#0c1a22;
-  --go:#6fd49a; --go-bg:#173324;
-  --warn:#f2c35a; --warn-bg:#3a2e0e;
-  --stop:#ff8f86; --stop-bg:#45191a;
+  --bg:#060a11;        /* page */
+  --panel:#0d1521;     /* cards */
+  --panel-2:#121d2c;   /* raised controls */
+  --ink:#e8f2ff;       /* text */
+  --muted:#8b9fb7;     /* secondary text */
+  --line:#21324a;      /* borders, grid */
+  --accent:#27e1ff;    /* instruments, controls, links */
+  --accent-ink:#03131a;
+  --go:#3dffa8;   --go-bg:rgba(61,255,168,.07);
+  --warn:#ffc247; --warn-bg:rgba(255,194,71,.09);
+  --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+  --display:"Oxanium","Eurostile","Arial Narrow",Arial,sans-serif;
+  --body:"Exo 2",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;max-width:100%;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  background-image:linear-gradient(rgba(39,225,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(39,225,255,.035) 1px,transparent 1px);
+  background-size:32px 32px}
 main,main *{min-width:0}
-main{width:100%;overflow-wrap:anywhere}
-body{background:var(--road);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
-main{max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:20px}
-h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
-h1{font-size:30px;letter-spacing:.01em}
-h2{font-size:24px}
-h3{font-size:19px}
+main{width:100%;max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:22px;overflow-wrap:anywhere}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1;letter-spacing:.02em}
+h1{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:.14em}
+h1 b{color:var(--accent);font-weight:700}
+h2{font-size:20px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+h3{font-size:17px;font-weight:600}
 p{margin:0}
 a{color:var(--accent)}
 .sub{color:var(--muted);font-size:14px}
-header{display:flex;flex-direction:column;gap:2px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-direction:column;gap:4px}
 section{display:flex;flex-direction:column;gap:12px}
-
-/* status panel */
-#status{border-radius:14px;padding:18px 16px;border:2px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:6px}
-#status[data-state="watch"]{border-color:var(--go);background:var(--go-bg)}
-#status[data-state="near"]{border-color:var(--warn);background:var(--warn-bg)}
-#status[data-state="alert"]{border-color:var(--stop);background:var(--stop-bg)}
-#stateLabel{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-#status[data-state="watch"] #stateLabel{color:var(--go)}
-#status[data-state="near"] #stateLabel{color:var(--warn)}
-#status[data-state="alert"] #stateLabel{color:var(--stop)}
-#headline{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
-#where{font-size:17px;font-weight:600}
-#meta{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
-.checks{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.checks li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-weight:600;font-size:15px}
-
-.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-button{font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:12px 16px;min-height:48px;cursor:pointer}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 150px}
-button.small{min-height:40px;padding:8px 12px;font-size:14px}
-button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-select,input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%}
-.inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:15px}
-.inline input{width:22px;height:22px}
-.note{font-size:14px;border-left:4px solid var(--warn);background:var(--warn-bg);padding:10px 12px;border-radius:6px}
-.note:empty{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
 [hidden]{display:none!important}
-.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:15px}
-.steps span{color:var(--muted);font-variant-numeric:tabular-nums}
-#routeSum{font-weight:500}
 
-/* cameras */
+/* ----- drive HUD ----- */
+#status{--tone:var(--accent);--tone-bg:transparent;position:relative;border-radius:18px;padding:16px;border:1px solid var(--tone);
+  background:linear-gradient(180deg,var(--tone-bg),transparent 60%),var(--panel);
+  box-shadow:0 0 0 1px rgba(0,0,0,.4) inset,0 0 26px -10px var(--tone);display:flex;flex-direction:column;gap:14px}
+#status[data-state="idle"]{--tone:var(--line)}
+#status[data-state="watch"]{--tone:var(--go);--tone-bg:var(--go-bg)}
+#status[data-state="near"]{--tone:var(--warn);--tone-bg:var(--warn-bg)}
+#status[data-state="alert"]{--tone:var(--stop);--tone-bg:var(--stop-bg)}
+#stateLabel{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--tone);display:flex;align-items:center;gap:8px}
+#status[data-state="idle"] #stateLabel{color:var(--muted)}
+#stateLabel::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;flex:none}
+.hud{display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center}
+.gauge{position:relative;width:132px;height:132px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.gauge .track{fill:none;stroke:var(--line);stroke-width:8}
+.gauge .arc{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:339.3;filter:drop-shadow(0 0 6px var(--accent))}
+.gauge.over .arc{stroke:var(--stop);filter:drop-shadow(0 0 6px var(--stop))}
+.gauge .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--display)}
+#spd{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.gauge.over #spd{color:var(--stop)}
+.gauge .unit{font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.next{display:flex;flex-direction:column;gap:2px}
+.next .cap{font-family:var(--display);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#headline{font-family:var(--display);font-weight:700;font-size:46px;line-height:1;font-variant-numeric:tabular-nums;color:var(--tone)}
+#status[data-state="idle"] #headline{color:var(--ink)}
+#where{font-size:16px;font-weight:600}
+#meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.scope{position:relative;width:100%;max-width:340px;aspect-ratio:1;margin:0 auto}
+#radar{width:100%;height:100%;display:block}
+.sweep{position:absolute;inset:14px;border-radius:50%;pointer-events:none;opacity:0;
+  background:conic-gradient(from 0deg,transparent 0 300deg,rgba(39,225,255,.22) 360deg)}
+body.driving .sweep{opacity:1}
+.checks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.checks li{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-weight:600;font-size:14px;background:var(--panel-2)}
+.checks li::before{content:"";display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:1px;background:var(--accent);transform:rotate(45deg) translateY(-2px)}
+
+/* while a drive is running, only the instruments stay on screen */
+body.driving header .sub,body.driving .when-parked{display:none}
+body.driving main{gap:12px}
+
+/* ----- controls ----- */
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;font-family:var(--display);font-weight:600;letter-spacing:.06em;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:12px 16px;min-height:48px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 150px;text-transform:uppercase;box-shadow:0 0 18px -6px var(--accent)}
+button.small{min-height:40px;padding:8px 12px;font-size:14px}
+button:active{transform:translateY(1px)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+select,input[type=text],input[type=number],textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:44px;width:100%}
+.inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:15px}
+.inline input{width:22px;height:22px;accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.note{font-size:14px;border-left:3px solid var(--warn);background:var(--warn-bg);padding:10px 12px;border-radius:6px}
+.note:empty{display:none}
+
+/* ----- camera list ----- */
 #camList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-#camList li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+#camList li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .camName{font-weight:600}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
 .tag{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;border:1px solid var(--line);color:var(--muted)}
 .tag.ok{color:var(--go);border-color:var(--go)}
 .tag.rough{color:var(--warn);border-color:var(--warn)}
 .dist{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* rules */
+/* ----- routes and rules ----- */
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.steps span{color:var(--muted);font-variant-numeric:tabular-nums}
+#routeSum{font-weight:500}
 .rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
-.rules li{border-left:4px solid var(--accent);padding:2px 0 2px 12px}
+.rules li{border-left:2px solid var(--accent);padding:2px 0 2px 12px}
 .rules b{display:block}
 .src{font-size:13px;color:var(--muted);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px}
 footer{font-size:13px;color:var(--muted)}
-@media (max-width:360px){.checks{grid-template-columns:1fr}#headline{font-size:34px}}
-@media (prefers-reduced-motion:no-preference){#status{transition:background .25s,border-color .25s}}
+@media (max-width:360px){.hud{grid-template-columns:112px 1fr}.gauge{width:112px;height:112px}#spd{font-size:36px}#headline{font-size:38px}.checks{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){
+  #status{transition:border-color .25s,box-shadow .25s}
+  .gauge .arc{transition:stroke-dashoffset .5s linear}
+  body.driving .sweep{animation:sweep 3.2s linear infinite}
+  #status[data-state="alert"] #stateLabel::before{animation:pulse .8s ease-in-out infinite}
+}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.25}}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>RoboWatch</h1>
+    <h1>Robo<b>Watch</b></h1>
     <p class="sub">Harare camera robots: a heads-up before each one, and a route around them when there is one.</p>
   </header>
 
   <section aria-label="Drive">
     <div id="status" data-state="idle" aria-live="assertive">
       <div id="stateLabel">Not driving</div>
-      <div id="headline">Ready</div>
-      <div id="where">Start before you move off, then leave the phone alone.</div>
-      <div id="meta">14 camera robots loaded</div>
+      <div class="hud">
+        <div class="gauge" id="gauge" aria-label="Speed">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"></circle><circle class="arc" id="arc" cx="60" cy="60" r="54"></circle></svg>
+          <div class="num"><span id="spd">--</span><span class="unit">km/h</span></div>
+        </div>
+        <div class="next">
+          <span class="cap">Next camera robot</span>
+          <div id="headline">Ready</div>
+          <div id="where">Start before you move off, then leave the phone alone.</div>
+          <div id="meta">14 camera robots loaded</div>
+        </div>
+      </div>
+      <div class="scope">
+        <canvas id="radar" aria-label="Radar view of camera robots around you"></canvas>
+        <div class="sweep"></div>
+      </div>
       <ul class="checks" aria-label="At every camera robot">
         <li>Phone down</li>
         <li>Belts on</li>
@@ -137,7 +170,7 @@ footer{font-size:13px;color:var(--muted)}
     </div>
     <p id="note" class="note" role="status"></p>
 
-    <div class="card">
+    <div class="card when-parked">
       <div class="grid2">
         <label for="radius">Warn me this far ahead
           <select id="radius">
@@ -163,7 +196,7 @@ footer{font-size:13px;color:var(--muted)}
     </div>
   </section>
 
-  <section aria-label="Route around cameras">
+  <section class="when-parked" aria-label="Route around cameras">
     <h2>Route around cameras</h2>
     <p class="sub">Say where you are going. RoboWatch looks for a route that stays clear of every camera robot on your list, and tells you what the detour costs. Patrol cars carry cameras too, so the rules apply on every road.</p>
     <div class="card">
@@ -190,7 +223,7 @@ footer{font-size:13px;color:var(--muted)}
     </div>
   </section>
 
-  <section aria-label="Camera robots">
+  <section class="when-parked" aria-label="Camera robots">
     <h2>Camera robots</h2>
     <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Most positions come from map data. Any marked as estimated may be a few hundred metres out, so check those on the map.</p>
     <div class="row">
@@ -231,7 +264,7 @@ footer{font-size:13px;color:var(--muted)}
     </div>
   </section>
 
-  <section aria-label="Rules">
+  <section class="when-parked" aria-label="Rules">
     <h2>Staying on the right side of the law</h2>
     <div class="card">
       <h3>What the cameras catch, and what to do instead</h3>
@@ -266,7 +299,7 @@ footer{font-size:13px;color:var(--muted)}
     </ul>
   </section>
 
-  <footer>Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice.</footer>
+  <footer class="when-parked">Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice.</footer>
 </main>
 
 <script>
@@ -367,6 +400,63 @@ footer{font-size:13px;color:var(--muted)}
     say("Camera robot ahead. "+cam.n.replace(/&/g,"and")+". Phone down, belts on, stop behind the line.");
   }
 
+  // ----- instruments -----
+  var PAL={accent:"#27e1ff",line:"#21324a",muted:"#8b9fb7",ink:"#e8f2ff",warn:"#ffc247",stop:"#ff5470",go:"#3dffa8"};
+  var RANGE=1500, target=null;
+  function setDriving(on){try{document.body.classList.toggle("driving",!!on);}catch(e){}}
+  function setSpeed(kmh,over){
+    var g=$("gauge"),arc=$("arc");
+    $("spd").textContent=(kmh===null||kmh===undefined)?"--":String(kmh);
+    try{
+      var f=(kmh===null||kmh===undefined)?0:Math.min(kmh,120)/120;
+      arc.style.strokeDashoffset=String(339.3*(1-f));
+      g.classList.toggle("over",!!over);
+    }catch(e){}
+  }
+  // Radar: you in the middle, direction of travel at the top, rings every 500 m.
+  function drawRadar(){
+    var cv=$("radar");
+    if(!cv||!cv.getContext) return;
+    var css=cv.clientWidth||300,dpr=window.devicePixelRatio||1,px=Math.round(css*dpr);
+    if(cv.width!==px){cv.width=px;cv.height=px;}
+    var g=cv.getContext("2d");
+    g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,css,css);
+    var cx=css/2,cy=css/2,R=css/2-14,k=R/RANGE,rad=Math.PI/180,rot=(heading===null?0:heading),i;
+    g.lineWidth=1;g.font="600 10px Oxanium, Arial, sans-serif";g.textAlign="center";g.textBaseline="middle";
+    for(i=1;i<=3;i++){
+      g.strokeStyle=PAL.line;g.beginPath();g.arc(cx,cy,R*i/3,0,Math.PI*2);g.stroke();
+      g.fillStyle=PAL.muted;g.fillText(i===2?"1 km":(i*500<1000?(i*500)+" m":"1.5 km"),cx+R*i/3*0.707+2,cy+R*i/3*0.707+8);
+    }
+    g.strokeStyle=PAL.line;g.beginPath();g.moveTo(cx-R,cy);g.lineTo(cx+R,cy);g.moveTo(cx,cy-R);g.lineTo(cx,cy+R);g.stroke();
+    // alert distance
+    g.setLineDash([4,5]);g.strokeStyle=PAL.accent;g.globalAlpha=.55;g.beginPath();g.arc(cx,cy,radius()*k,0,Math.PI*2);g.stroke();g.setLineDash([]);g.globalAlpha=1;
+    // north marker
+    var na=(0-rot)*rad;
+    g.fillStyle=PAL.accent;g.font="700 12px Oxanium, Arial, sans-serif";g.fillText("N",cx+(R+8)*Math.sin(na),cy-(R+8)*Math.cos(na));
+    if(lastPos){
+      cams.forEach(function(c){
+        var d=(typeof c._d==="number")?c._d:dist(lastPos.lat,lastPos.lon,c.lat,c.lon);
+        var a=(bearing(lastPos.lat,lastPos.lon,c.lat,c.lon)-rot)*rad,far=d>RANGE,rr=Math.min(d,RANGE)*k;
+        var x=cx+rr*Math.sin(a),y=cy-rr*Math.cos(a);
+        var colr=c._passed?PAL.muted:(c._in?PAL.stop:PAL.warn);
+        g.fillStyle=colr;g.strokeStyle=colr;
+        if(far){g.globalAlpha=.6;g.beginPath();g.arc(x,y,3,0,Math.PI*2);g.stroke();g.globalAlpha=1;return;}
+        g.shadowColor=colr;g.shadowBlur=c._passed?0:12;
+        g.beginPath();g.arc(x,y,c._in?7:5,0,Math.PI*2);g.fill();g.shadowBlur=0;
+        if(c===target){
+          g.font="600 11px Oxanium, Arial, sans-serif";g.fillStyle=PAL.ink;
+          var name=c.n.split("&")[0].trim(),tx=Math.max(50,Math.min(css-50,x));
+          g.fillText(name.length>20?name.slice(0,19)+"…":name,tx,y<24?y+16:y-14);
+        }
+      });
+    }else{
+      g.fillStyle=PAL.muted;g.font="600 11px Oxanium, Arial, sans-serif";g.fillText("WAITING FOR GPS",cx,cy+R*0.5);
+    }
+    // you
+    g.fillStyle=PAL.accent;g.shadowColor=PAL.accent;g.shadowBlur=10;
+    g.beginPath();g.moveTo(cx,cy-9);g.lineTo(cx+6,cy+7);g.lineTo(cx,cy+3);g.lineTo(cx-6,cy+7);g.closePath();g.fill();g.shadowBlur=0;
+  }
+
   function remind(c){
     if(nativeDriving) return;
     if(NATIVE){try{window.Android.beep();}catch(e){}}
@@ -419,13 +509,14 @@ footer{font-size:13px;color:var(--muted)}
       if(d<bestD){bestD=d;best=c;}
       if((c._in||isAhead)&&d<aheadD){aheadD=d;ahead=c;}
     });
-    var tail=(isDemo?"Demo drive":"Live GPS")+(kmhNum!==null?" · "+kmhNum+" km/h":"");
+    var tail=isDemo?"Demo drive":"Live GPS";
+    target=ahead||best;setSpeed(kmhNum,over);
     if(ahead&&ahead._in){setStatus("alert",over?"Slow down · camera robot ahead":"Camera robot ahead",fmt(aheadD),ahead.n,tail);}
     else if(ahead&&aheadD<=r*2.5){setStatus("near","Coming up",fmt(aheadD),ahead.n,tail);}
     else if(ahead){setStatus("watch","Watching","Clear","Next: "+ahead.n+", "+fmt(aheadD),tail);}
     else if(best){setStatus("watch","Watching","Clear","None ahead. Nearest: "+best.n+", "+fmt(bestD),tail);}
     else{setStatus("watch","Watching","Clear","No more camera robots nearby on your list.",tail);}
-    renderDistances();
+    renderDistances();drawRadar();
   }
 
   function stopAll(){
@@ -433,10 +524,12 @@ footer{font-size:13px;color:var(--muted)}
     if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
     if(wake){try{wake.release();}catch(e){} wake=null;}
     if(nativeDriving){nativeDriving=false;try{window.Android.stopDrive();}catch(e){}}
-    cams.forEach(function(c){c._in=false;c._passed=false;});anchor=null;heading=null;
+    cams.forEach(function(c){c._in=false;c._passed=false;});anchor=null;heading=null;target=null;
+    setDriving(false);setSpeed(null,false);
     $("startBtn").textContent="Start drive";
     $("demoBtn").textContent="Run a demo drive";
     setStatus("idle","Not driving","Ready","Start before you move off, then leave the phone alone.",cams.length+" camera robots loaded");
+    drawRadar();
   }
   function prime(){
     try{audio=audio||new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended") audio.resume();}catch(e){}
@@ -447,7 +540,7 @@ footer{font-size:13px;color:var(--muted)}
     if(NATIVE){
       if(nativeDriving||demoTimer){stopAll();note("");return;}
       note("");syncNative();
-      nativeDriving=true;
+      nativeDriving=true;setDriving(true);
       $("startBtn").textContent="Stop";
       setStatus("watch","Watching","Finding you","Waiting for a GPS fix. Alerts keep working with the screen off.","Live GPS");
       try{window.Android.startDrive();}catch(e){stopAll();note("The drive could not be started.");}
@@ -458,7 +551,7 @@ footer{font-size:13px;color:var(--muted)}
     var blocked="Live GPS is blocked in this preview. It will work once the page is published at its own https address. Use the demo drive for now.";
     if(!navigator.geolocation){note(blocked);return;}
     setStatus("watch","Watching","Finding you","Waiting for a GPS fix.","Live GPS");
-    $("startBtn").textContent="Stop";
+    $("startBtn").textContent="Stop";setDriving(true);
     try{
       watchId=navigator.geolocation.watchPosition(function(p){
         onFix(p.coords.latitude,p.coords.longitude,p.coords.speed,false);
@@ -474,7 +567,7 @@ footer{font-size:13px;color:var(--muted)}
     if(!cams.length){note("Add a camera robot first.");return;}
     prime();note("This is a simulated drive toward "+cams[0].n+". No GPS is used.");
     var c=cams[0],start=1300,step=45,m=start;
-    $("demoBtn").textContent="Stop demo";
+    $("demoBtn").textContent="Stop demo";setDriving(true);
     function tick(){
       // approach from the west along the same latitude, pass through, carry on east
       var dLon=(m/111320)/Math.cos(c.lat*Math.PI/180);
@@ -775,11 +868,12 @@ footer{font-size:13px;color:var(--muted)}
     nativeFix:function(lat,lon,sp){if(nativeDriving) onFix(lat,lon,(typeof sp==="number"&&sp>=0)?sp:null,false);},
     nativeStopped:function(msg){if(nativeDriving){nativeDriving=false;stopAll();} if(msg) note(msg);}};
   ["radius","limit","voice"].forEach(function(id){$(id).addEventListener("change",syncNative);});
-  render();updateIdle();
+  render();updateIdle();drawRadar();
+  try{window.addEventListener("resize",drawRadar);if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawRadar);}catch(e){}
   if(NATIVE){
     syncNative();
     $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive.";
-    try{if(window.Android.isDriving()){nativeDriving=true;$("startBtn").textContent="Stop";setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
+    try{if(window.Android.isDriving()){nativeDriving=true;setDriving(true);$("startBtn").textContent="Stop";setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
   }
 })();
 </script>
