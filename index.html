@@ -21,7 +21,7 @@
   --grid:rgba(0,122,153,.06); --sweep:rgba(0,122,153,.18);
   --go:#0a8554;   --go-bg:rgba(10,133,84,.08);
   --warn:#8f5d00; --warn-bg:rgba(170,112,0,.10);
-  --stop:#c61f47; --stop-bg:rgba(198,31,71,.08);
+  --stop:#c8102e; --stop-bg:rgba(200,16,46,.08);
   --display:"Oxanium","Eurostile","Arial Narrow",Arial,sans-serif;
   --body:"Oxanium",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
@@ -30,14 +30,14 @@
     color-scheme:dark;
     --bg:#060a11; --panel:#0d1521; --panel-2:#121d2c; --ink:#e8f2ff; --muted:#8b9fb7; --line:#21324a;
     --accent:#27e1ff; --accent-ink:#03131a; --grid:rgba(39,225,255,.035); --sweep:rgba(39,225,255,.22);
-    --go:#3dffa8; --go-bg:rgba(61,255,168,.07); --warn:#ffc247; --warn-bg:rgba(255,194,71,.09); --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+    --go:#22e07a; --go-bg:rgba(34,224,122,.08); --warn:#ffb224; --warn-bg:rgba(255,178,36,.10); --stop:#ff3b4f; --stop-bg:rgba(255,59,79,.13);
   }
 }
 :root[data-theme="dark"]{
     color-scheme:dark;
     --bg:#060a11; --panel:#0d1521; --panel-2:#121d2c; --ink:#e8f2ff; --muted:#8b9fb7; --line:#21324a;
     --accent:#27e1ff; --accent-ink:#03131a; --grid:rgba(39,225,255,.035); --sweep:rgba(39,225,255,.22);
-    --go:#3dffa8; --go-bg:rgba(61,255,168,.07); --warn:#ffc247; --warn-bg:rgba(255,194,71,.09); --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+    --go:#22e07a; --go-bg:rgba(34,224,122,.08); --warn:#ffb224; --warn-bg:rgba(255,178,36,.10); --stop:#ff3b4f; --stop-bg:rgba(255,59,79,.13);
 }
 @font-face{font-family:"Oxanium";src:url("vendor/oxanium.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
 *{box-sizing:border-box}
@@ -48,7 +48,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16p
 main,main *{min-width:0}
 main{width:100%;max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:22px;overflow-wrap:anywhere}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1;letter-spacing:.02em}
-h1{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:.14em}
+h1{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;display:flex;align-items:center;gap:10px}
+h1 svg{width:38px;height:38px;flex:none}
 h1 b{color:var(--accent);font-weight:700}
 h2{font-size:20px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
 h3{font-size:17px;font-weight:600}
@@ -71,16 +72,22 @@ section{display:flex;flex-direction:column;gap:12px}
 #stateLabel{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--tone);display:flex;align-items:center;gap:8px}
 #status[data-state="idle"] #stateLabel{color:var(--muted)}
 #stateLabel::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor;flex:none}
-.hud{display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center}
-.gauge{position:relative;width:132px;height:132px}
-.gauge svg{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
-.gauge .track{fill:none;stroke:var(--line);stroke-width:8}
-.gauge .arc{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;stroke-dasharray:339.3;stroke-dashoffset:339.3;filter:drop-shadow(0 0 6px var(--accent))}
-.gauge.over .arc{stroke:var(--stop);filter:drop-shadow(0 0 6px var(--stop))}
-.gauge .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--display)}
-#spd{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.gauge.over #spd{color:var(--stop)}
-.gauge .unit{font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.hud{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center}
+/* the signal head: one lamp is lit for the current state */
+.signal{background:#0a0d12;border:2px solid #2b343f;border-radius:28px;padding:10px;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 10px 22px -12px rgba(0,0,0,.7)}
+.lamp{width:68px;height:68px;border-radius:50%;border:2px solid #000;background:radial-gradient(circle at 35% 30%,var(--hi),var(--dim) 72%);box-shadow:inset 0 -6px 10px rgba(0,0,0,.45)}
+.lamp.red{--lit:#ff3b4f;--dim:#34090f;--hi:#5c1820}
+.lamp.amber{--lit:#ffb224;--dim:#33240a;--hi:#5a4212}
+.lamp.green{--lit:#22e07a;--dim:#08301c;--hi:#12563a}
+#status[data-state="alert"] .lamp.red,#status[data-state="near"] .lamp.amber,#status[data-state="watch"] .lamp.green{
+  background:radial-gradient(circle at 35% 30%,#fff 0,var(--lit) 38%,var(--lit) 100%);box-shadow:0 0 26px 4px var(--lit),inset 0 -6px 10px rgba(0,0,0,.18)}
+.speed{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--display)}
+#spd{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.speed .unit{font-size:11px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.speed .bar{flex:1 0 100%;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+#arc{height:100%;width:0;border-radius:3px;background:var(--accent)}
+.speed.over #spd{color:var(--stop)}
+.speed.over #arc{background:var(--stop)}
 .next{display:flex;flex-direction:column;gap:2px}
 .next .cap{font-family:var(--display);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
 #headline{font-family:var(--display);font-weight:700;font-size:46px;line-height:1;font-variant-numeric:tabular-nums;color:var(--tone)}
@@ -124,6 +131,8 @@ body.driving main{gap:12px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 button{font:inherit;font-family:var(--display);font-weight:600;letter-spacing:.06em;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);padding:12px 16px;min-height:48px;cursor:pointer}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);flex:1 1 150px;text-transform:uppercase;box-shadow:0 0 18px -6px var(--accent)}
+button.primary.go{background:var(--go);border-color:var(--go);box-shadow:0 0 18px -6px var(--go)}
+button.primary.go[data-on]{background:var(--stop);border-color:var(--stop);box-shadow:0 0 18px -6px var(--stop)}
 button.small{min-height:40px;padding:8px 12px;font-size:14px}
 button:active{transform:translateY(1px)}
 button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -154,21 +163,21 @@ select,input[type=text],input[type=number],textarea{font:inherit;color:var(--ink
 .rules b{display:block}
 .src{font-size:13px;color:var(--muted);padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px}
 footer{font-size:13px;color:var(--muted)}
-@media (max-width:360px){.hud{grid-template-columns:112px 1fr}.gauge{width:112px;height:112px}#spd{font-size:36px}#headline{font-size:38px}.checks{grid-template-columns:1fr}}
+@media (max-width:360px){.hud{grid-template-columns:84px 1fr;gap:12px}.lamp{width:56px;height:56px}#spd{font-size:28px}#headline{font-size:38px}.checks{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){
   #status{transition:border-color .25s,box-shadow .25s}
-  .gauge .arc{transition:stroke-dashoffset .5s linear}
+  #arc{transition:width .5s linear}
   body.driving .sweep{animation:sweep 3.2s linear infinite}
-  #status[data-state="alert"] #stateLabel::before{animation:pulse .8s ease-in-out infinite}
+  #status[data-state="alert"] #stateLabel::before,#status[data-state="alert"] .lamp.red{animation:pulse .8s ease-in-out infinite}
 }
 @keyframes sweep{to{transform:rotate(360deg)}}
-@keyframes pulse{50%{opacity:.25}}
+@keyframes pulse{50%{opacity:.45}}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Robo<b>Watch</b></h1>
+    <h1><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#0a0d12" stroke="#8b9fb7" stroke-width="2.5"/><circle cx="24" cy="24" r="16.5" fill="none" stroke="#2b343f" stroke-width="2"/><circle cx="24" cy="13.5" r="4.6" fill="#ff3b4f"/><circle cx="24" cy="24" r="4.6" fill="#ffb224"/><circle cx="24" cy="34.5" r="4.6" fill="#22e07a"/></svg><span>Robo<b>Watch</b></span></h1>
     <p class="sub">Harare camera robots: a heads-up before each one, and a route around them when there is one.</p>
   </header>
 
@@ -176,15 +185,20 @@ footer{font-size:13px;color:var(--muted)}
     <div id="status" data-state="idle" aria-live="assertive">
       <div id="stateLabel">Not driving</div>
       <div class="hud">
-        <div class="gauge" id="gauge" aria-label="Speed">
-          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="track" cx="60" cy="60" r="54"></circle><circle class="arc" id="arc" cx="60" cy="60" r="54"></circle></svg>
-          <div class="num"><span id="spd">--</span><span class="unit">km/h</span></div>
+        <div class="signal" aria-hidden="true">
+          <span class="lamp red"></span>
+          <span class="lamp amber"></span>
+          <span class="lamp green"></span>
         </div>
         <div class="next">
           <span class="cap">Next camera robot</span>
           <div id="headline">Ready</div>
           <div id="where">Start before you move off, then leave the phone alone.</div>
           <div id="meta">14 camera robots loaded</div>
+          <div class="speed" id="gauge" aria-label="Speed">
+            <span id="spd">--</span><span class="unit">km/h</span>
+            <div class="bar"><div id="arc"></div></div>
+          </div>
         </div>
       </div>
       <div class="seg" role="group" aria-label="Map view">
@@ -205,7 +219,7 @@ footer{font-size:13px;color:var(--muted)}
     </div>
 
     <div class="row">
-      <button class="primary" id="startBtn" type="button">Start drive</button>
+      <button class="primary go" id="startBtn" type="button">Start drive</button>
       <button id="demoBtn" type="button">Run a demo drive</button>
     </div>
     <p id="note" class="note" role="status"></p>
@@ -554,7 +568,7 @@ footer{font-size:13px;color:var(--muted)}
     $("spd").textContent=(kmh===null||kmh===undefined)?"--":String(kmh);
     try{
       var f=(kmh===null||kmh===undefined)?0:Math.min(kmh,120)/120;
-      arc.style.strokeDashoffset=String(339.3*(1-f));
+      arc.style.width=(f*100)+"%";
       g.classList.toggle("over",!!over);
     }catch(e){}
   }
@@ -673,7 +687,7 @@ footer{font-size:13px;color:var(--muted)}
     if(nativeDriving){nativeDriving=false;try{window.Android.stopDrive();}catch(e){}}
     cams.forEach(function(c){c._in=false;c._passed=false;});anchor=null;heading=null;target=null;
     setDriving(false);setSpeed(null,false);
-    $("startBtn").textContent="Start drive";
+    $("startBtn").textContent="Start drive";$("startBtn").removeAttribute("data-on");
     $("demoBtn").textContent="Run a demo drive";
     setStatus("idle","Not driving","Ready","Start before you move off, then leave the phone alone.",cams.length+" camera robots loaded");
     drawView();
@@ -688,7 +702,7 @@ footer{font-size:13px;color:var(--muted)}
       if(nativeDriving||demoTimer){stopAll();note("");return;}
       note("");syncNative();
       nativeDriving=true;setDriving(true);
-      $("startBtn").textContent="Stop";
+      $("startBtn").textContent="Stop";$("startBtn").setAttribute("data-on","1");
       setStatus("watch","Watching","Finding you","Waiting for a GPS fix. Alerts keep working with the screen off.","Live GPS");
       try{window.Android.startDrive();}catch(e){stopAll();note("The drive could not be started.");}
       return;
@@ -698,7 +712,7 @@ footer{font-size:13px;color:var(--muted)}
     var blocked="Live GPS is blocked in this preview. It will work once the page is published at its own https address. Use the demo drive for now.";
     if(!navigator.geolocation){note(blocked);return;}
     setStatus("watch","Watching","Finding you","Waiting for a GPS fix.","Live GPS");
-    $("startBtn").textContent="Stop";setDriving(true);
+    $("startBtn").textContent="Stop";$("startBtn").setAttribute("data-on","1");setDriving(true);
     try{
       watchId=navigator.geolocation.watchPosition(function(p){
         onFix(p.coords.latitude,p.coords.longitude,p.coords.speed,false);
@@ -1027,7 +1041,7 @@ footer{font-size:13px;color:var(--muted)}
     $("watchRow").hidden=false;
     syncNative();
     $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive. For watch vibration, allow RoboWatch notifications in your watch app.";
-    try{if(window.Android.isDriving()){nativeDriving=true;setDriving(true);$("startBtn").textContent="Stop";setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
+    try{if(window.Android.isDriving()){nativeDriving=true;setDriving(true);$("startBtn").textContent="Stop";$("startBtn").setAttribute("data-on","1");setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
   }
 })();
 </script>
