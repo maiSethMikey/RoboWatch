@@ -1,0 +1,9 @@
+osm | 200 image/png 36492 | https://tile.openstreetmap.org/15/19210/18033.png
+osm_fr_hot | 200 image/png 35696 | https://a.tile.openstreetmap.fr/hot/15/19210/18033.png
+osm_fr_osmfr | 200 image/png 30429 | https://a.tile.openstreetmap.fr/osmfr/15/19210/18033.png
+esri_street | 200 image/jpeg 38201 | https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/15/18033/19210
+esri_light | 200 image/jpeg 18438 | https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/15/18033/19210
+esri_dark | 200 image/jpeg 16315 | https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/15/18033/19210
+carto_light | 200 image/png 2049 | https://a.basemaps.cartocdn.com/light_all/15/19210/18033.png
+osm_de | 200 image/png 35264 | https://tile.openstreetmap.de/15/19210/18033.png
+cyclosm | 200 image/png 33338 | https://a.tile-cyclosm.openstreetmap.fr/cyclosm/15/19210/18033.png
