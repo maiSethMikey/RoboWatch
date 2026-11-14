@@ -145,8 +145,9 @@ public class MainActivity extends Activity implements DriveService.Listener {
         }
 
         @JavascriptInterface
-        public void setSettings(int radius, int limit, boolean voice) {
-            prefs.edit().putInt("radius", radius).putInt("limit", limit).putBoolean("voice", voice).apply();
+        public void setSettings(int radius, int limit, boolean voice, boolean sound, boolean watch) {
+            prefs.edit().putInt("radius", radius).putInt("limit", limit)
+                    .putBoolean("voice", voice).putBoolean("sound", sound).putBoolean("watch", watch).apply();
             reloadService();
         }
 

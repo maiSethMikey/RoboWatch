@@ -33,7 +33,9 @@ public class DriveService extends Service implements LocationListener {
     static final String ACTION_STOP = "zw.robowatch.app.STOP";
     static final String PREFS = "robowatch";
     private static final String CHANNEL = "drive";
+    private static final String ALERT_CHANNEL = "alerts";
     private static final int NOTE_ID = 1;
+    private static final int ALERT_ID = 2;
 
     interface Listener {
         void onFix(double lat, double lon, float speed);
@@ -56,6 +58,8 @@ public class DriveService extends Service implements LocationListener {
     private int radius = 400;
     private int limit = 60;
     private boolean voice = true;
+    private boolean sound = true;
+    private boolean watch = true;
 
     private LocationManager locationManager;
     private Speaker speaker;
@@ -100,6 +104,7 @@ public class DriveService extends Service implements LocationListener {
         if (!running) {
             running = true;
             if (voice) speaker.say("RoboWatch is watching.");
+            else if (sound) speaker.beep(1);
         }
         return START_STICKY;
     }
@@ -151,6 +156,8 @@ public class DriveService extends Service implements LocationListener {
         radius = prefs.getInt("radius", 400);
         limit = prefs.getInt("limit", 60);
         voice = prefs.getBoolean("voice", true);
+        sound = prefs.getBoolean("sound", true);
+        watch = prefs.getBoolean("watch", true);
         cams.clear();
         try {
             JSONArray list = new JSONArray(prefs.getString("cams", "[]"));
@@ -205,8 +212,9 @@ public class DriveService extends Service implements LocationListener {
                 c.min = d;
                 c.reminded = d <= 200;
                 c.slowed = false;
-                speaker.beep(2);
+                if (sound) speaker.beep(2);
                 say("Camera robot ahead. " + c.name.replace("&", "and") + ". Phone down, belts on, stop behind the line.");
+                buzz("Camera robot ahead", c.name + ", " + (Math.round(d / 10) * 10) + " m");
             }
             if (c.in) {
                 if (d < c.min) c.min = d;
@@ -218,8 +226,9 @@ public class DriveService extends Service implements LocationListener {
                 } else {
                     if (!c.reminded && d <= 150) {
                         c.reminded = true;
-                        speaker.beep(1);
+                        if (sound) speaker.beep(1);
                         say("Camera robot in 150 metres.");
+                        buzz("Camera robot in 150 m", c.name);
                     }
                     if (limit > 0 && kmh > limit && !c.slowed) {
                         c.slowed = true;
@@ -232,6 +241,36 @@ public class DriveService extends Service implements LocationListener {
 
     private void say(String text) {
         if (voice) speaker.say(text);
+    }
+
+    /**
+     * Posts a short vibrating notification. The phone buzzes, and a paired smartwatch that
+     * mirrors this app's notifications buzzes too. No sound: voice and beeps cover that.
+     */
+    private void buzz(String title, String text) {
+        if (!watch) return;
+        try {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm.getNotificationChannel(ALERT_CHANNEL) == null) {
+                NotificationChannel channel = new NotificationChannel(ALERT_CHANNEL, "Camera robot alerts", NotificationManager.IMPORTANCE_HIGH);
+                channel.setDescription("A vibration on your phone and smartwatch when a camera robot is close.");
+                channel.enableVibration(true);
+                channel.setVibrationPattern(new long[]{0, 350, 150, 350});
+                channel.setSound(null, null);
+                nm.createNotificationChannel(channel);
+            }
+            Notification note = new Notification.Builder(this, ALERT_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_stat)
+                    .setContentTitle(title)
+                    .setContentText(text)
+                    .setCategory(Notification.CATEGORY_NAVIGATION)
+                    .setVisibility(Notification.VISIBILITY_PUBLIC)
+                    .setAutoCancel(true)
+                    .setTimeoutAfter(20000L)
+                    .build();
+            nm.notify(ALERT_ID, note);
+        } catch (Exception ignored) {
+        }
     }
 
     private static double dist(double aLat, double aLon, double bLat, double bLon) {
@@ -283,6 +322,10 @@ public class DriveService extends Service implements LocationListener {
         } catch (Exception ignored) {
         }
         if (speaker != null) speaker.shutdown();
+        try {
+            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).cancel(ALERT_ID);
+        } catch (Exception ignored) {
+        }
         try {
             stopForeground(Service.STOP_FOREGROUND_REMOVE);
         } catch (Exception ignored) {

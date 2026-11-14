@@ -1,34 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RoboWatch</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=Exo+2:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet.css">
 <style>
-/* Direction: a night-drive HUD. One dark theme by choice; a cyan instrument accent;
+/* Direction: a drive HUD in dark or light; one instrument accent; Oxanium throughout;
    layout is one phone column with the drive instruments first, reference material below. */
 :root{
-  color-scheme:dark;
-  --bg:#060a11;        /* page */
-  --panel:#0d1521;     /* cards */
-  --panel-2:#121d2c;   /* raised controls */
-  --ink:#e8f2ff;       /* text */
-  --muted:#8b9fb7;     /* secondary text */
-  --line:#21324a;      /* borders, grid */
-  --accent:#27e1ff;    /* instruments, controls, links */
-  --accent-ink:#03131a;
-  --go:#3dffa8;   --go-bg:rgba(61,255,168,.07);
-  --warn:#ffc247; --warn-bg:rgba(255,194,71,.09);
-  --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+  color-scheme:light;
+  --bg:#edf2f7;        /* page */
+  --panel:#ffffff;     /* cards */
+  --panel-2:#f1f5f9;   /* raised controls */
+  --ink:#0b1a2b;       /* text */
+  --muted:#506378;     /* secondary text */
+  --line:#c9d5e1;      /* borders, grid */
+  --accent:#007a99;    /* instruments, controls, links */
+  --accent-ink:#ffffff;
+  --grid:rgba(0,122,153,.06); --sweep:rgba(0,122,153,.18);
+  --go:#0a8554;   --go-bg:rgba(10,133,84,.08);
+  --warn:#8f5d00; --warn-bg:rgba(170,112,0,.10);
+  --stop:#c61f47; --stop-bg:rgba(198,31,71,.08);
   --display:"Oxanium","Eurostile","Arial Narrow",Arial,sans-serif;
-  --body:"Exo 2",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --body:"Oxanium",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#060a11; --panel:#0d1521; --panel-2:#121d2c; --ink:#e8f2ff; --muted:#8b9fb7; --line:#21324a;
+    --accent:#27e1ff; --accent-ink:#03131a; --grid:rgba(39,225,255,.035); --sweep:rgba(39,225,255,.22);
+    --go:#3dffa8; --go-bg:rgba(61,255,168,.07); --warn:#ffc247; --warn-bg:rgba(255,194,71,.09); --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+  }
+}
+:root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#060a11; --panel:#0d1521; --panel-2:#121d2c; --ink:#e8f2ff; --muted:#8b9fb7; --line:#21324a;
+    --accent:#27e1ff; --accent-ink:#03131a; --grid:rgba(39,225,255,.035); --sweep:rgba(39,225,255,.22);
+    --go:#3dffa8; --go-bg:rgba(61,255,168,.07); --warn:#ffc247; --warn-bg:rgba(255,194,71,.09); --stop:#ff5470; --stop-bg:rgba(255,84,112,.12);
+}
+@font-face{font-family:"Oxanium";src:url("vendor/oxanium.woff2") format("woff2");font-weight:200 800;font-style:normal;font-display:swap}
 *{box-sizing:border-box}
 html,body{margin:0;max-width:100%;overflow-x:hidden}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
-  background-image:linear-gradient(rgba(39,225,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(39,225,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
   background-size:32px 32px}
 main,main *{min-width:0}
 main{width:100%;max-width:560px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:22px;overflow-wrap:anywhere}
@@ -48,7 +63,7 @@ section{display:flex;flex-direction:column;gap:12px}
 /* ----- drive HUD ----- */
 #status{--tone:var(--accent);--tone-bg:transparent;position:relative;border-radius:18px;padding:16px;border:1px solid var(--tone);
   background:linear-gradient(180deg,var(--tone-bg),transparent 60%),var(--panel);
-  box-shadow:0 0 0 1px rgba(0,0,0,.4) inset,0 0 26px -10px var(--tone);display:flex;flex-direction:column;gap:14px}
+  box-shadow:0 0 26px -10px var(--tone);display:flex;flex-direction:column;gap:14px}
 #status[data-state="idle"]{--tone:var(--line)}
 #status[data-state="watch"]{--tone:var(--go);--tone-bg:var(--go-bg)}
 #status[data-state="near"]{--tone:var(--warn);--tone-bg:var(--warn-bg)}
@@ -75,11 +90,30 @@ section{display:flex;flex-direction:column;gap:12px}
 .scope{position:relative;width:100%;max-width:340px;aspect-ratio:1;margin:0 auto}
 #radar{width:100%;height:100%;display:block}
 .sweep{position:absolute;inset:14px;border-radius:50%;pointer-events:none;opacity:0;
-  background:conic-gradient(from 0deg,transparent 0 300deg,rgba(39,225,255,.22) 360deg)}
+  background:conic-gradient(from 0deg,transparent 0 300deg,var(--sweep) 360deg)}
 body.driving .sweep{opacity:1}
 .checks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .checks li{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-weight:600;font-size:14px;background:var(--panel-2)}
 .checks li::before{content:"";display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:1px;background:var(--accent);transform:rotate(45deg) translateY(-2px)}
+
+/* radar / street map switch */
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:40px;padding:6px 10px;background:transparent;color:var(--muted);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+#street{width:100%;max-width:340px;aspect-ratio:1;margin:0 auto;border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;z-index:0}
+.leaflet-container{background:var(--panel-2);font:inherit}
+.leaflet-container .leaflet-control-attribution{font-size:10px;background:var(--panel);color:var(--muted)}
+.leaflet-container .leaflet-control-attribution a{color:var(--muted)}
+
+/* fold-away sections */
+.fold{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:12px 16px;font-family:var(--display);font-weight:600;font-size:16px;letter-spacing:.03em}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(45deg) translate(-2px,-2px)}
+.fold[open]>summary::after{transform:rotate(225deg) translate(-2px,-2px)}
+.fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:14px}
+.fold-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+.fold #camList li{background:var(--panel-2)}
 
 /* while a drive is running, only the instruments stay on screen */
 body.driving header .sub,body.driving .when-parked{display:none}
@@ -152,10 +186,15 @@ footer{font-size:13px;color:var(--muted)}
           <div id="meta">14 camera robots loaded</div>
         </div>
       </div>
-      <div class="scope">
+      <div class="seg" role="group" aria-label="Map view">
+        <button type="button" id="viewRadar" aria-pressed="true">Radar</button>
+        <button type="button" id="viewMap" aria-pressed="false">Street map</button>
+      </div>
+      <div class="scope" id="scope">
         <canvas id="radar" aria-label="Radar view of camera robots around you"></canvas>
         <div class="sweep"></div>
       </div>
+      <div id="street" hidden aria-label="Street map of camera robots"></div>
       <ul class="checks" aria-label="At every camera robot">
         <li>Phone down</li>
         <li>Belts on</li>
@@ -171,6 +210,7 @@ footer{font-size:13px;color:var(--muted)}
     <p id="note" class="note" role="status"></p>
 
     <div class="card when-parked">
+      <h3>Settings</h3>
       <div class="grid2">
         <label for="radius">Warn me this far ahead
           <select id="radius">
@@ -179,10 +219,7 @@ footer{font-size:13px;color:var(--muted)}
             <option value="600">600 m</option>
           </select>
         </label>
-        <label class="inline" for="voice" style="align-self:end;min-height:44px">
-          <input type="checkbox" id="voice" checked> Speak the alert
-        </label>
-        <label for="limit">Tell me to slow down near cameras above
+        <label for="limit">Say slow down near cameras above
           <select id="limit">
             <option value="0">Off</option>
             <option value="40">40 km/h</option>
@@ -191,8 +228,18 @@ footer{font-size:13px;color:var(--muted)}
             <option value="80">80 km/h</option>
           </select>
         </label>
+        <label for="theme">Look
+          <select id="theme">
+            <option value="dark" selected>Dark</option>
+            <option value="light">Light</option>
+            <option value="auto">Match my phone</option>
+          </select>
+        </label>
       </div>
-      <p class="sub" id="appHint">Mount the phone and turn the volume up. Alerts are spoken so you never need to look at or touch the screen while driving.</p>
+      <label class="inline" for="voice"><input type="checkbox" id="voice" checked> Voice alerts</label>
+      <label class="inline" for="sound"><input type="checkbox" id="sound" checked> Sound alerts (beeps)</label>
+      <label class="inline" for="watch" id="watchRow" hidden><input type="checkbox" id="watch" checked> Vibrate my phone and smartwatch</label>
+      <p class="sub" id="appHint">Mount the phone and turn the volume up, so you never need to look at or touch the screen while driving.</p>
     </div>
   </section>
 
@@ -226,13 +273,19 @@ footer{font-size:13px;color:var(--muted)}
   <section class="when-parked" aria-label="Camera robots">
     <h2>Camera robots</h2>
     <p class="sub">Police say 20 sites are live. These are the ones named in news reports so far. Most positions come from map data. Any marked as estimated may be a few hundred metres out, so check those on the map.</p>
-    <div class="row">
-      <button class="primary" id="fixBtn" type="button">Fix positions from map data</button>
-    </div>
-    <p id="camNote" class="note" role="status"></p>
-    <ul id="camList"></ul>
-    <div class="card">
-      <h3>Add a camera robot</h3>
+    <details class="fold">
+      <summary><span>Camera robot list (<span id="camCount">14</span>)</span></summary>
+      <div class="fold-body">
+        <div class="row">
+          <button class="small" id="fixBtn" type="button">Fix positions from map data</button>
+        </div>
+        <p id="camNote" class="note" role="status"></p>
+        <ul id="camList"></ul>
+      </div>
+    </details>
+    <details class="fold">
+      <summary>Add a camera robot</summary>
+      <div class="fold-body">
       <label for="newName">Intersection
         <input type="text" id="newName" placeholder="e.g. Seke Rd &amp; Dieppe Rd" autocomplete="off">
       </label>
@@ -249,9 +302,11 @@ footer{font-size:13px;color:var(--muted)}
         <button class="small" id="resetBtn" type="button">Restore the original list</button>
       </div>
       <p class="sub">To get coordinates, press and hold the spot in Google Maps and copy the two numbers it shows.</p>
-    </div>
-    <div class="card">
-      <h3>Share or move your camera list</h3>
+      </div>
+    </details>
+    <details class="fold">
+      <summary>Share or move your camera list</summary>
+      <div class="fold-body">
       <p class="sub">Copy your list to send to another driver or to another copy of RoboWatch. To load a list, paste it into the box and tap Load.</p>
       <label for="listBox">Camera list
         <textarea id="listBox" rows="5" spellcheck="false" placeholder="One camera per line: name;latitude;longitude"></textarea>
@@ -261,12 +316,14 @@ footer{font-size:13px;color:var(--muted)}
         <button class="small" id="loadBtn" type="button">Load the list in the box</button>
       </div>
       <p id="listNote" class="note" role="status"></p>
-    </div>
+      </div>
+    </details>
   </section>
 
   <section class="when-parked" aria-label="Rules">
-    <h2>Staying on the right side of the law</h2>
-    <div class="card">
+    <details class="fold">
+      <summary>Staying on the right side of the law</summary>
+      <div class="fold-body">
       <h3>What the cameras catch, and what to do instead</h3>
       <ul class="rules">
         <li><b>Red robot</b>Stop behind the white stop line and wait for green. Treat amber as stop unless braking would be unsafe. Police say red-light cases are likely to go to court instead of a fine.</li>
@@ -279,8 +336,6 @@ footer{font-size:13px;color:var(--muted)}
         <li><b>Officer on point duty</b>Follow the officer's signals even against the light. Police have said you will not be penalised for doing so.</li>
         <li><b>On foot</b>Cross at marked crossings. Police say pedestrians are being watched too.</li>
       </ul>
-    </div>
-    <div class="card">
       <h3>If a notice arrives</h3>
       <ul class="rules">
         <li><b>How it reaches you</b>An SMS to the registered owner with a video clip and the fine. Officers review each clip before a ticket goes out.</li>
@@ -289,19 +344,21 @@ footer{font-size:13px;color:var(--muted)}
         <li><b>Do not ignore it</b>Police warn that unanswered tickets can lead to blacklisting and a warrant of arrest.</li>
         <li><b>Sold your car?</b>Change ownership within two weeks, or the new driver's tickets come to you.</li>
       </ul>
-    </div>
-    <ul class="src" aria-label="Sources">
+      <ul class="src" aria-label="Sources">
       <li><a href="https://www.heraldonline.co.zw/zrp-rolls-out-digital-traffic-fine-notifications-48-million-violators-caught-on-camera/">The Herald, 18 Oct 2026: digital fine notifications</a></li>
       <li><a href="https://www.zimdaily.com/article/news-2026-10-18-traffic-cameras-4-8-million/">ZimDaily, 18 Oct 2026: where to check fines</a></li>
       <li><a href="https://www.heraldonline.co.zw/smart-sharp-eyes-on-harares-roads-motorists-jaywalkers-in-for-a-shock/">The Herald, Nov 2026: junctions under watch</a></li>
       <li><a href="https://www.newzimbabwe.com/zrp-shoots-down-rumours-of-traffic-fine-waiver-at-harare-crime-hotspots/">NewZimbabwe, Nov 2026: junctions raised by motorists</a></li>
       <li><a href="https://www.myzimbabwe.co.zw/news/192118-smart-traffic-management-system-motorists-who-failed-to-change-vehicle-ownership-and-those-ignoring-camera-tickets-now-in-hot-soup.html">MyZimbabwe, Oct 2026: ignored tickets and ownership</a></li>
     </ul>
+      </div>
+    </details>
   </section>
 
   <footer class="when-parked">Not affiliated with the ZRP or the City of Harare. Camera sites change, so obey every robot as if it has a camera. General information, not legal advice.</footer>
 </main>
 
+<script src="vendor/leaflet.js"></script>
 <script>
 (function(){
   "use strict";
@@ -327,6 +384,18 @@ footer{font-size:13px;color:var(--muted)}
   ];
   var KEY="robotwatch.cams.v1";
   var $=function(id){return document.getElementById(id);};
+  // Settings are remembered on this phone.
+  var PKEY="robowatch.prefs.v1";
+  var prefs={theme:"dark",view:"radar",voice:true,sound:true,watch:true,radius:"400",limit:"60"};
+  try{var saved=JSON.parse(localStorage.getItem(PKEY)||"null");if(saved){Object.keys(prefs).forEach(function(k){if(saved[k]!==undefined) prefs[k]=saved[k];});}}catch(e){}
+  $("radius").value=prefs.radius;$("limit").value=prefs.limit;$("theme").value=prefs.theme;
+  $("voice").checked=!!prefs.voice;$("sound").checked=!!prefs.sound;$("watch").checked=!!prefs.watch;
+  function savePrefs(){
+    prefs.radius=$("radius").value;prefs.limit=$("limit").value;prefs.theme=$("theme").value;
+    prefs.voice=!!$("voice").checked;prefs.sound=!!$("sound").checked;prefs.watch=!!$("watch").checked;
+    try{localStorage.setItem(PKEY,JSON.stringify(prefs));}catch(e){}
+    syncNative();
+  }
   var cams=load();
   var watchId=null, demoTimer=null, wake=null, audio=null, lastPos=null;
   // Inside the Android app, a native service does the GPS and the speaking so alerts work with the screen off.
@@ -335,7 +404,7 @@ footer{font-size:13px;color:var(--muted)}
     if(!NATIVE) return;
     try{
       window.Android.setCameras(JSON.stringify(cams.map(function(c){return {n:c.n,lat:c.lat,lon:c.lon};})));
-      window.Android.setSettings(radius(),speedLimit(),!!$("voice").checked);
+      window.Android.setSettings(radius(),speedLimit(),!!$("voice").checked,!!$("sound").checked,!!$("watch").checked);
     }catch(e){}
   }
 
@@ -372,7 +441,7 @@ footer{font-size:13px;color:var(--muted)}
   function note(t){$("note").textContent=t||"";}
 
   function beep(){
-    if(nativeDriving) return;
+    if(nativeDriving||!$("sound").checked) return;
     if(NATIVE){try{window.Android.beep();}catch(e){} return;}
     try{
       if(!audio) return;
@@ -403,6 +472,65 @@ footer{font-size:13px;color:var(--muted)}
   // ----- instruments -----
   var PAL={accent:"#27e1ff",line:"#21324a",muted:"#8b9fb7",ink:"#e8f2ff",warn:"#ffc247",stop:"#ff5470",go:"#3dffa8"};
   var RANGE=1500, target=null;
+  function readPal(){
+    try{var cs=getComputedStyle(document.documentElement);
+      Object.keys(PAL).forEach(function(k){var v=cs.getPropertyValue("--"+k).trim();if(v) PAL[k]=v;});}catch(e){}
+  }
+  function isDark(){
+    try{var t=document.documentElement.getAttribute("data-theme");
+      if(t==="dark") return true; if(t==="light") return false;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;}catch(e){return true;}
+  }
+  function applyTheme(){
+    try{var r=document.documentElement;
+      if(prefs.theme==="auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme",prefs.theme);}catch(e){}
+    readPal();
+    if(tiles){try{tiles.setUrl(tileUrl());}catch(e){}}
+    drawView();
+  }
+
+  // Street map (Leaflet). North is always at the top; the map follows you during a drive.
+  var map=null,tiles=null,mapYou=null,mapCams=[];
+  function tileUrl(){return "https://{s}.basemaps.cartocdn.com/"+(isDark()?"dark_all":"light_all")+"/{z}/{x}/{y}{r}.png";}
+  function initMap(){
+    if(map) return true;
+    if(!window.L) return false;
+    try{
+      map=window.L.map("street",{zoomControl:false});
+      map.attributionControl.setPrefix("Leaflet");
+      tiles=window.L.tileLayer(tileUrl(),{maxZoom:19,subdomains:"abcd",attribution:"&copy; OpenStreetMap contributors &copy; CARTO"}).addTo(map);
+      if(lastPos) map.setView([lastPos.lat,lastPos.lon],15);
+      else if(cams.length) map.fitBounds(cams.map(function(c){return [c.lat,c.lon];}),{padding:[20,20]});
+      else map.setView([-17.8292,31.0522],13);
+    }catch(e){map=null;return false;}
+    return true;
+  }
+  function drawMap(){
+    if(!initMap()) return;
+    try{
+      mapCams.forEach(function(m){m.remove();});mapCams=[];
+      cams.forEach(function(c){
+        var colr=c._passed?PAL.muted:(c._in?PAL.stop:PAL.warn);
+        mapCams.push(window.L.circleMarker([c.lat,c.lon],{radius:c._in?10:7,color:colr,weight:2,fillColor:colr,fillOpacity:c._passed?.4:.85}).addTo(map).bindTooltip(c.n));
+      });
+      if(lastPos){
+        if(!mapYou) mapYou=window.L.circleMarker([lastPos.lat,lastPos.lon],{radius:8,color:PAL.ink,weight:2,fillColor:PAL.accent,fillOpacity:1}).addTo(map);
+        else mapYou.setLatLng([lastPos.lat,lastPos.lon]).setStyle({color:PAL.ink,fillColor:PAL.accent}).bringToFront();
+        if(watchId!==null||demoTimer||nativeDriving) map.setView([lastPos.lat,lastPos.lon],Math.max(map.getZoom(),15),{animate:false});
+      }
+    }catch(e){}
+  }
+  function drawView(){if(prefs.view==="map") drawMap(); else drawRadar();}
+  function setView(v){
+    if(v==="map"&&!window.L){note("The street map could not be loaded. The radar view still works.");v="radar";}
+    prefs.view=v;
+    $("scope").hidden=(v==="map");$("street").hidden=(v!=="map");
+    $("viewRadar").setAttribute("aria-pressed",v==="radar"?"true":"false");
+    $("viewMap").setAttribute("aria-pressed",v==="map"?"true":"false");
+    try{localStorage.setItem(PKEY,JSON.stringify(prefs));}catch(e){}
+    drawView();
+    if(v==="map"&&map){try{map.invalidateSize();setTimeout(function(){if(map){map.invalidateSize();drawMap();}},60);}catch(e){}}
+  }
   function setDriving(on){try{document.body.classList.toggle("driving",!!on);}catch(e){}}
   function setSpeed(kmh,over){
     var g=$("gauge"),arc=$("arc");
@@ -459,9 +587,11 @@ footer{font-size:13px;color:var(--muted)}
 
   function remind(c){
     if(nativeDriving) return;
-    if(NATIVE){try{window.Android.beep();}catch(e){}}
-    else try{if(audio){var o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);
-      g.gain.setValueAtTime(0.25,audio.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.2);o.start();o.stop(audio.currentTime+0.22);}}catch(e){}
+    if($("sound").checked){
+      if(NATIVE){try{window.Android.beep();}catch(e){}}
+      else try{if(audio){var o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);
+        g.gain.setValueAtTime(0.25,audio.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.2);o.start();o.stop(audio.currentTime+0.22);}}catch(e){}
+    }
     say("Camera robot in 150 metres.");
   }
   function slow(lim){say("Slow down. You are over "+lim+".");}
@@ -516,7 +646,7 @@ footer{font-size:13px;color:var(--muted)}
     else if(ahead){setStatus("watch","Watching","Clear","Next: "+ahead.n+", "+fmt(aheadD),tail);}
     else if(best){setStatus("watch","Watching","Clear","None ahead. Nearest: "+best.n+", "+fmt(bestD),tail);}
     else{setStatus("watch","Watching","Clear","No more camera robots nearby on your list.",tail);}
-    renderDistances();drawRadar();
+    renderDistances();drawView();
   }
 
   function stopAll(){
@@ -529,7 +659,7 @@ footer{font-size:13px;color:var(--muted)}
     $("startBtn").textContent="Start drive";
     $("demoBtn").textContent="Run a demo drive";
     setStatus("idle","Not driving","Ready","Start before you move off, then leave the phone alone.",cams.length+" camera robots loaded");
-    drawRadar();
+    drawView();
   }
   function prime(){
     try{audio=audio||new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==="suspended") audio.resume();}catch(e){}
@@ -616,6 +746,8 @@ footer{font-size:13px;color:var(--muted)}
       ul.appendChild(li);
     });
     renderDistances();
+    $("camCount").textContent=cams.length;
+    try{drawView();}catch(e){}
   }
   function updateIdle(){
     if(watchId===null&&!demoTimer) $("meta").textContent=cams.length+" camera robots loaded";
@@ -867,12 +999,17 @@ footer{font-size:13px;color:var(--muted)}
   window.__rw={onFix:onFix,
     nativeFix:function(lat,lon,sp){if(nativeDriving) onFix(lat,lon,(typeof sp==="number"&&sp>=0)?sp:null,false);},
     nativeStopped:function(msg){if(nativeDriving){nativeDriving=false;stopAll();} if(msg) note(msg);}};
-  ["radius","limit","voice"].forEach(function(id){$(id).addEventListener("change",syncNative);});
-  render();updateIdle();drawRadar();
-  try{window.addEventListener("resize",drawRadar);if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawRadar);}catch(e){}
+  ["radius","limit","voice","sound","watch"].forEach(function(id){$(id).addEventListener("change",function(){savePrefs();drawView();});});
+  $("theme").addEventListener("change",function(){savePrefs();applyTheme();});
+  $("viewRadar").addEventListener("click",function(){setView("radar");});
+  $("viewMap").addEventListener("click",function(){setView("map");});
+  render();updateIdle();applyTheme();setView(prefs.view);
+  try{window.addEventListener("resize",drawView);if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawView);}catch(e){}
+  try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(){if(prefs.theme==="auto") applyTheme();});}catch(e){}
   if(NATIVE){
+    $("watchRow").hidden=false;
     syncNative();
-    $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive.";
+    $("appHint").textContent="In this app, alerts keep working with the screen off or while you use other apps. Tap Stop when you arrive. For watch vibration, allow RoboWatch notifications in your watch app.";
     try{if(window.Android.isDriving()){nativeDriving=true;setDriving(true);$("startBtn").textContent="Stop";setStatus("watch","Watching","Driving","Alerts are running.","Live GPS");}}catch(e){}
   }
 })();
