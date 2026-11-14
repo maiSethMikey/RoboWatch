@@ -50,7 +50,7 @@ public class DriveService extends Service implements LocationListener {
     private static final class Cam {
         String name;
         double lat, lon;
-        boolean in, passed, reminded, slowed;
+        boolean in, passed, at250, at25, slowed;
         double min, max;
     }
 
@@ -207,12 +207,16 @@ public class DriveService extends Service implements LocationListener {
             }
             if (c.passed) continue;
             boolean inCone = heading < 0 || angleBetween(bearing(lat, lon, c.lat, c.lon), heading) <= 60;
+            // Beeps count down to the camera: one at the first warning, two at 250 m, three at 25 m.
+            // The 25 m beeps are sent one GPS reading early, so they sound at about 25 m.
+            double last = 25 + (speed > 0 ? speed : 0);
             if (d <= radius && !c.in && inCone) {
                 c.in = true;
                 c.min = d;
-                c.reminded = d <= 200;
+                c.at25 = d <= last;
+                c.at250 = c.at25 || d <= 250;
                 c.slowed = false;
-                if (sound) speaker.beep(2);
+                if (sound) speaker.beep(c.at25 ? 3 : (c.at250 ? 2 : 1));
                 say("Camera robot ahead. " + c.name.replace("&", "and") + ". Phone down, belts on, stop behind the line.");
                 buzz("Camera robot ahead", c.name + ", " + (Math.round(d / 10) * 10) + " m");
             }
@@ -224,11 +228,17 @@ public class DriveService extends Service implements LocationListener {
                     c.in = false;
                     c.max = d;
                 } else {
-                    if (!c.reminded && d <= 150) {
-                        c.reminded = true;
-                        if (sound) speaker.beep(1);
-                        say("Camera robot in 150 metres.");
-                        buzz("Camera robot in 150 m", c.name);
+                    if (!c.at25 && d <= last) {
+                        c.at25 = true;
+                        c.at250 = true;
+                        if (sound) speaker.beep(3);
+                        else say("Camera robot now.");
+                        buzz("Camera robot now", c.name);
+                    } else if (!c.at250 && d <= 250) {
+                        c.at250 = true;
+                        if (sound) speaker.beep(2);
+                        say("Camera robot in 250 metres.");
+                        buzz("Camera robot in 250 m", c.name);
                     }
                     if (limit > 0 && kmh > limit && !c.slowed) {
                         c.slowed = true;
