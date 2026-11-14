@@ -233,7 +233,7 @@ footer{font-size:13px;color:var(--muted)}
     <div class="card when-parked">
       <h3>Settings</h3>
       <div class="grid2">
-        <label for="radius">Warn me this far ahead
+        <label for="radius">First warning
           <select id="radius">
             <option value="250">250 m</option>
             <option value="400" selected>400 m</option>
@@ -259,6 +259,7 @@ footer{font-size:13px;color:var(--muted)}
       </div>
       <label class="inline" for="voice"><input type="checkbox" id="voice" checked> Voice alerts</label>
       <label class="inline" for="sound"><input type="checkbox" id="sound" checked> Sound alerts (beeps)</label>
+      <p class="sub">Beeps count down to each camera robot: one at the first warning, two at 250 m and three at about 25 m.</p>
       <label class="inline" for="watch" id="watchRow" hidden><input type="checkbox" id="watch" checked> Vibrate my phone and smartwatch</label>
       <p class="sub" id="appHint">Mount the phone and turn the volume up, so you never need to look at or touch the screen while driving.</p>
     </div>
@@ -461,18 +462,19 @@ footer{font-size:13px;color:var(--muted)}
   }
   function note(t){$("note").textContent=t||"";}
 
-  function beep(){
+  function beep(n){
     if(nativeDriving||!$("sound").checked) return;
-    if(NATIVE){try{window.Android.beep();}catch(e){} return;}
+    n=n||1;
+    if(NATIVE){try{if(window.Android.beepTimes) window.Android.beepTimes(n); else window.Android.beep();}catch(e){} return;}
     try{
       if(!audio) return;
-      [0,0.28].forEach(function(t){
-        var o=audio.createOscillator(),g=audio.createGain();
+      for(var i=0;i<n;i++){
+        var t=i*0.28,o=audio.createOscillator(),g=audio.createGain();
         o.frequency.value=880;o.connect(g);g.connect(audio.destination);
         g.gain.setValueAtTime(0.25,audio.currentTime+t);
         g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+t+0.2);
         o.start(audio.currentTime+t);o.stop(audio.currentTime+t+0.22);
-      });
+      }
     }catch(e){}
   }
   function say(text){
@@ -483,9 +485,10 @@ footer{font-size:13px;color:var(--muted)}
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     }catch(e){}
   }
-  function fire(cam){
+  // Beeps count down to the camera: one at the warning distance, two at 250 m, three at 25 m.
+  function fire(cam,beeps){
     if(nativeDriving) return;
-    beep();
+    beep(beeps);
     try{if(navigator.vibrate) navigator.vibrate([200,100,200]);}catch(e){}
     say("Camera robot ahead. "+cam.n.replace(/&/g,"and")+". Phone down, belts on, stop behind the line.");
   }
@@ -622,14 +625,10 @@ footer{font-size:13px;color:var(--muted)}
     g.beginPath();g.moveTo(cx,cy-9);g.lineTo(cx+6,cy+7);g.lineTo(cx,cy+3);g.lineTo(cx-6,cy+7);g.closePath();g.fill();g.shadowBlur=0;
   }
 
-  function remind(c){
+  function stage(beeps,text){
     if(nativeDriving) return;
-    if($("sound").checked){
-      if(NATIVE){try{window.Android.beep();}catch(e){}}
-      else try{if(audio){var o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);
-        g.gain.setValueAtTime(0.25,audio.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+0.2);o.start();o.stop(audio.currentTime+0.22);}}catch(e){}
-    }
-    say("Camera robot in 150 metres.");
+    beep(beeps);
+    if(text) say(text);
   }
   function slow(lim){say("Slow down. You are over "+lim+".");}
   function speedLimit(){var el=$("limit");return el?(parseInt(el.value,10)||0):0;}
@@ -661,13 +660,19 @@ footer{font-size:13px;color:var(--muted)}
       if(!c._passed){
         // alert only for cameras in our direction of travel
         var inCone=heading===null||Math.abs(((bearing(lat,lon,c.lat,c.lon)-heading+540)%360)-180)<=60;
-        if(d<=r&&!c._in&&inCone){c._in=true;c._min=d;c._r2=d<=200;c._spd=false;fire(c);}
+        // the 25 m beeps are sent one GPS reading early, so they sound at about 25 m
+        var last=25+((typeof speedMs==="number"&&speedMs>0)?speedMs:0);
+        if(d<=r&&!c._in&&inCone){
+          c._in=true;c._min=d;c._spd=false;c._s25=d<=last;c._s250=c._s25||d<=250;
+          fire(c,c._s25?3:(c._s250?2:1));
+        }
         if(c._in){
           if(d<c._min) c._min=d;
           // 100 m beyond the closest point: this one is done, look for the next
           if(d>=c._min+100){c._passed=true;c._in=false;c._max=d;}
           else{
-            if(!c._r2&&d<=150){c._r2=true;remind(c);}
+            if(!c._s25&&d<=last){c._s25=true;c._s250=true;stage(3,$("sound").checked?"":"Camera robot now.");}
+            else if(!c._s250&&d<=250){c._s250=true;stage(2,"Camera robot in 250 metres.");}
             if(lim&&kmhNum!==null&&kmhNum>lim){over=true;if(!c._spd){c._spd=true;slow(lim);}}
           }
         }

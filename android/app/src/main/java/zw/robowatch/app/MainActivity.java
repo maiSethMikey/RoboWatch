@@ -196,6 +196,11 @@ public class MainActivity extends Activity implements DriveService.Listener {
         public void beep() {
             speaker.beep(2);
         }
+
+        @JavascriptInterface
+        public void beepTimes(int times) {
+            speaker.beep(Math.max(1, Math.min(times, 3)));
+        }
     }
 
     private void reloadService() {
